@@ -546,10 +546,84 @@ function parsearCSV(csv) {
   });
 }
 
+// ── CONFIGURAÇÃO DE FATURAS ─────────────────────────────────
+// Dia de fechamento de cada cartão — gastos após esse dia
+// vão para a fatura do mês seguinte
+const FECHAMENTO_CARTAO = {
+  'Crédito Nubank':   28,  // fecha dia 28, vence dia 05
+  'Crédito Itaú':    20,
+  'Crédito Bradesco':15,
+  'Crédito Inter':    7,
+  'Crédito BB':       5,
+};
+
+// Dado uma transação, retorna o mês/ano da FATURA (não da compra)
+function mesFatura(dataStr, meio) {
+  const data = parsearDataStr(dataStr);
+  if (!data) return null;
+  const diaFechamento = FECHAMENTO_CARTAO[meio];
+  if (!diaFechamento) {
+    // Débito/PIX/etc — usa o mês da própria data
+    return MESES_C[data.getMonth()] + '/' + data.getFullYear();
+  }
+  // Se a compra foi APÓS o fechamento, vai para fatura do mês seguinte
+  if (data.getDate() > diaFechamento) {
+    const proximo = new Date(data.getFullYear(), data.getMonth() + 1, 1);
+    return MESES_C[proximo.getMonth()] + '/' + proximo.getFullYear();
+  }
+  return MESES_C[data.getMonth()] + '/' + data.getFullYear();
+}
+
+function parsearDataStr(str) {
+  if (!str) return null;
+  str = str.toString().trim().replace(/"/g,'');
+
+  // DD/MM/YYYY
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) {
+    const [d,m,y] = str.split('/').map(Number);
+    return new Date(y, m-1, d);
+  }
+  // YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    const [y,m,d] = str.split('-').map(Number);
+    return new Date(y, m-1, d);
+  }
+  // Formato do Sheets exportado via gviz: "5/1/2026" (M/D/YYYY)
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) {
+    const parts = str.split('/').map(Number);
+    // Sheets exporta M/D/YYYY
+    return new Date(parts[2], parts[0]-1, parts[1]);
+  }
+  // "1 de maio de 2026" — formato pt-BR por extenso
+  const mesesPT = {janeiro:0,fevereiro:1,março:2,abril:3,maio:4,junho:5,
+                   julho:6,agosto:7,setembro:8,outubro:9,novembro:10,dezembro:11};
+  const m = str.toLowerCase().match(/(\d+)\s+de\s+(\w+)\s+de\s+(\d{4})/);
+  if (m && mesesPT[m[2]] !== undefined) return new Date(+m[3], mesesPT[m[2]], +m[1]);
+
+  const d = new Date(str);
+  if (!isNaN(d)) return d;
+  return null;
+}
+
 // ── PROCESSAMENTO ────────────────────────────────────────────
 function processarDados(trans, venc, metas, insights, estab, mesStr) {
   const linhasTrans = trans.slice(1).filter(r=>r[0]&&r[2]);
-  const transMes    = linhasTrans.filter(r=>r[9]===mesStr);
+
+  // Filtra pelo mês da FATURA (considera fechamento do cartão)
+  // Se coluna J (índice 9) estiver preenchida e no formato certo, usa ela
+  // Senão calcula pela data + meio de pagamento
+  const transMes = linhasTrans.filter(r => {
+    const colJ = (r[9]||'').toString().trim().replace(/\./g,'').replace(/abr/i,'Abr').replace(/mai/i,'Mai')
+      .replace(/jan/i,'Jan').replace(/fev/i,'Fev').replace(/mar/i,'Mar').replace(/jun/i,'Jun')
+      .replace(/jul/i,'Jul').replace(/ago/i,'Ago').replace(/set/i,'Set').replace(/out/i,'Out')
+      .replace(/nov/i,'Nov').replace(/dez/i,'Dez');
+    // Tenta coluna J primeiro (normalizada)
+    if (colJ && colJ.includes('/')) return colJ === mesStr;
+    // Fallback: calcula pela data e meio de pagamento
+    const meio = r[6] || '';
+    const faturaMs = mesFatura(r[0], meio);
+    return faturaMs === mesStr;
+  });
 
   const receita = transMes.filter(r=>r[3]==='Receita')
     .reduce((s,r)=>s+num(r[2]),0);
