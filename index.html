@@ -172,8 +172,11 @@ main{padding:16px;max-width:520px;margin:0 auto}
 <!-- SETUP -->
 <div class="setup-overlay" id="setupOverlay">
   <div class="setup-card">
-    <div class="setup-title">💰 Finanças</div>
-    <div class="setup-sub">Configure uma vez para conectar ao Google Sheets.</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+      <div class="setup-title" style="margin:0">💰 Finanças</div>
+      <button onclick="fecharSetup()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:0 4px" title="Fechar">×</button>
+    </div>
+    <div class="setup-sub">Configure para conectar ao Google Sheets.</div>
     <label class="setup-label">ID da Planilha Google Sheets</label>
     <input class="setup-input" id="inputSheetId" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUq..."/>
     <label class="setup-label">URL do Apps Script (Web App)</label>
@@ -193,6 +196,7 @@ main{padding:16px;max-width:520px;margin:0 auto}
     <button class="btn-sm" onclick="mudarMes(-1)">‹</button>
     <button class="btn-sm" id="btnMes" onclick="mudarMes(0)"></button>
     <button class="btn-sm" onclick="mudarMes(1)">›</button>
+    <button class="btn-sm" onclick="abrirSetup()" title="Configurações" style="padding:5px 8px">⚙️</button>
   </div>
 </header>
 
@@ -351,6 +355,16 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('f-data').value = new Date().toISOString().split('T')[0];
 });
 
+function abrirSetup() {
+  document.getElementById('inputSheetId').value   = CFG.sheetId   || '';
+  document.getElementById('inputScriptUrl').value = CFG.scriptUrl || '';
+  document.getElementById('inputSecret').value    = CFG.secret    || '';
+  document.getElementById('inputUserName').value  = CFG.userName  || '';
+  document.getElementById('setupOverlay').style.display = 'flex';
+}
+function fecharSetup() {
+  if (CFG.sheetId && CFG.scriptUrl) document.getElementById('setupOverlay').style.display = 'none';
+}
 function salvarConfig() {
   CFG.sheetId   = document.getElementById('inputSheetId').value.trim();
   CFG.scriptUrl = document.getElementById('inputScriptUrl').value.trim();
