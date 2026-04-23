@@ -566,12 +566,18 @@ function mesFatura(dataStr, meio) {
     // Débito/PIX/etc — usa o mês da própria data
     return MESES_C[data.getMonth()] + '/' + data.getFullYear();
   }
-  // Se a compra foi APÓS o fechamento, vai para fatura do mês seguinte
+  // Lógica correta do cartão de crédito:
+  // Compras ATÉ o dia de fechamento → fatura do mês SEGUINTE
+  // Compras APÓS o dia de fechamento → fatura de dois meses à frente
+  // Ex Nubank fecha dia 28:
+  //   compra em 22/abr (<=28) → fatura mai (mês seguinte)
+  //   compra em 29/abr (>28)  → fatura jun (dois meses à frente)
+  const proximo = new Date(data.getFullYear(), data.getMonth() + 1, 1);
   if (data.getDate() > diaFechamento) {
-    const proximo = new Date(data.getFullYear(), data.getMonth() + 1, 1);
-    return MESES_C[proximo.getMonth()] + '/' + proximo.getFullYear();
+    const doisMeses = new Date(data.getFullYear(), data.getMonth() + 2, 1);
+    return MESES_C[doisMeses.getMonth()] + '/' + doisMeses.getFullYear();
   }
-  return MESES_C[data.getMonth()] + '/' + data.getFullYear();
+  return MESES_C[proximo.getMonth()] + '/' + proximo.getFullYear();
 }
 
 function parsearDataStr(str) {
