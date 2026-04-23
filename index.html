@@ -5,1122 +5,779 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
 <meta name="theme-color" content="#0D1117"/>
 <title>Finanças</title>
-<link rel="manifest" href="manifest.json"/>
 <style>
-  /* ── TOKENS ─────────────────────────────── */
-  :root {
-    --bg:       #0D1117;
-    --surface:  #161B22;
-    --card:     #1C2128;
-    --border:   #30363D;
-    --text:     #E6EDF3;
-    --muted:    #8B949E;
-    --green:    #3FB950;
-    --green-bg: #0D2318;
-    --red:      #F85149;
-    --red-bg:   #2D1117;
-    --amber:    #D29922;
-    --amber-bg: #261D0E;
-    --blue:     #58A6FF;
-    --blue-bg:  #0C1D35;
-    --purple:   #BC8CFF;
-    --radius:   14px;
-    --font:     'Geist', 'SF Pro Text', -apple-system, system-ui, sans-serif;
-  }
+:root {
+  --bg:      #0D1117; --surface: #161B22; --card: #1C2128; --border: #30363D;
+  --text:    #E6EDF3; --muted:   #8B949E;
+  --green:   #3FB950; --green-bg:#0D2318;
+  --red:     #F85149; --red-bg:  #2D1117;
+  --amber:   #D29922; --amber-bg:#261D0E;
+  --blue:    #58A6FF; --blue-bg: #0C1D35;
+  --purple:  #BC8CFF; --radius:  14px;
+  --font:    'SF Pro Text',-apple-system,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.5;min-height:100dvh;padding-bottom:80px}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+/* HEADER */
+header{position:sticky;top:0;z-index:100;background:rgba(13,17,23,.9);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.logo{font-size:17px;font-weight:600;letter-spacing:-.3px;display:flex;align-items:center;gap:7px;flex-shrink:0}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--green)}
+.header-nav{display:flex;gap:6px;align-items:center}
+.btn-sm{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:5px 10px;font-size:13px;cursor:pointer}
+.btn-sm:active{background:var(--border)}
+#btnMes{min-width:76px}
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font);
-    font-size: 15px;
-    line-height: 1.5;
-    min-height: 100dvh;
-    padding-bottom: env(safe-area-inset-bottom, 24px);
-  }
+/* TABS */
+.tabs{display:flex;padding:10px 16px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--border);gap:4px}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);background:none;border:none}
+.tab.active{background:var(--card);color:var(--text);border:1px solid var(--border)}
 
-  /* ── HEADER ─────────────────────────────── */
-  header {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    background: rgba(13,17,23,0.85);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border-bottom: 1px solid var(--border);
-    padding: 14px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
+/* MAIN */
+main{padding:16px;max-width:520px;margin:0 auto}
+.section{display:none}.section.active{display:block}
 
-  .logo {
-    font-size: 17px;
-    font-weight: 600;
-    letter-spacing: -0.3px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.card-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:5px}
+.card-value{font-size:30px;font-weight:700;letter-spacing:-1px;line-height:1}
+.card-value.green{color:var(--green)}.card-value.red{color:var(--red)}.card-value.amber{color:var(--amber)}
+.card-sub{font-size:13px;color:var(--muted);margin-top:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.card-sm{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:13px}
+.card-sm .lbl{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.card-sm .val{font-size:20px;font-weight:700;letter-spacing:-.5px}
 
-  .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+/* BARRAS */
+.pilar-item{margin-bottom:14px}
+.pilar-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+.pilar-name{font-size:14px;font-weight:500}
+.pilar-vals{font-size:12px;color:var(--muted)}
+.bar-track{height:8px;background:var(--border);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+.bar-fill.ok{background:var(--green)}.bar-fill.warn{background:var(--amber)}.bar-fill.over{background:var(--red)}
+.pilar-status{font-size:12px;margin-top:3px;color:var(--muted)}
+.pilar-status.ok{color:var(--green)}.pilar-status.over{color:var(--red)}.pilar-status.warn{color:var(--amber)}
 
-  .header-right { display: flex; gap: 10px; align-items: center; }
+/* INSIGHT CARDS */
+.insight-card{border-radius:var(--radius);padding:15px;margin-bottom:11px;border:1px solid transparent}
+.insight-card.alta{background:var(--red-bg);border-color:rgba(248,81,73,.25)}
+.insight-card.media{background:var(--amber-bg);border-color:rgba(210,153,34,.25)}
+.insight-card.info,.insight-card.baixa{background:var(--blue-bg);border-color:rgba(88,166,255,.2)}
+.insight-card.invest{background:#0D2318;border-color:rgba(63,185,80,.25)}
+.insight-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:3px 8px;border-radius:6px;margin-bottom:7px}
+.insight-badge.alta{background:rgba(248,81,73,.15);color:var(--red)}
+.insight-badge.media{background:rgba(210,153,34,.15);color:var(--amber)}
+.insight-badge.info,.insight-badge.baixa{background:rgba(88,166,255,.15);color:var(--blue)}
+.insight-badge.invest{background:rgba(63,185,80,.15);color:var(--green)}
+.insight-title{font-size:15px;font-weight:600;margin-bottom:5px}
+.insight-text{font-size:14px;color:var(--muted);line-height:1.5;margin-bottom:9px}
+.insight-action{display:flex;align-items:flex-start;gap:7px;font-size:13px;color:var(--blue);background:rgba(88,166,255,.06);padding:9px 11px;border-radius:8px;border:1px solid rgba(88,166,255,.15);line-height:1.4}
 
-  .btn-sm {
-    background: var(--card);
-    border: 1px solid var(--border);
-    color: var(--text);
-    border-radius: 8px;
-    padding: 6px 12px;
-    font-size: 13px;
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-  .btn-sm:active { background: var(--border); }
+/* VENCIMENTOS */
+.venc-item{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
+.venc-item:last-child{border-bottom:none}
+.venc-name{font-size:14px;font-weight:500}
+.venc-date{font-size:12px;color:var(--muted);margin-top:2px}
+.venc-val{font-size:15px;font-weight:600}
+.venc-status{display:inline-block;font-size:11px;padding:2px 7px;border-radius:5px;margin-top:3px;font-weight:600}
+.venc-status.pendente{background:rgba(210,153,34,.15);color:var(--amber)}
+.venc-status.pago{background:rgba(63,185,80,.15);color:var(--green)}
+.venc-status.atrasado{background:rgba(248,81,73,.15);color:var(--red)}
 
-  /* ── TABS ───────────────────────────────── */
-  .tabs {
-    display: flex;
-    gap: 0;
-    padding: 12px 20px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    border-bottom: 1px solid var(--border);
-  }
-  .tabs::-webkit-scrollbar { display: none; }
+/* METAS */
+.meta-item{margin-bottom:18px}
+.meta-header{display:flex;justify-content:space-between;margin-bottom:7px}
+.meta-name{font-size:15px;font-weight:600}
+.meta-pct{font-size:14px;color:var(--green);font-weight:600}
+.meta-vals{font-size:13px;color:var(--muted);margin-bottom:7px}
+.meta-track{height:10px;background:var(--border);border-radius:5px;overflow:hidden}
+.meta-fill{height:100%;background:var(--green);border-radius:5px;transition:width .6s ease}
+.meta-fill.warn{background:var(--amber)}
 
-  .tab {
-    flex-shrink: 0;
-    padding: 7px 16px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 14px;
-    color: var(--muted);
-    background: none;
-    border: none;
-    transition: all 0.15s;
-    font-weight: 500;
-  }
-  .tab.active { background: var(--card); color: var(--text); border: 1px solid var(--border); }
-  .tab:active { opacity: 0.7; }
+/* FAB — botão flutuante de cadastro */
+.fab{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));right:20px;z-index:200;width:52px;height:52px;border-radius:50%;background:var(--blue);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(88,166,255,.35);transition:transform .15s}
+.fab:active{transform:scale(.93)}
+.fab svg{width:22px;height:22px;fill:#fff}
 
-  /* ── MAIN ───────────────────────────────── */
-  main { padding: 20px; max-width: 520px; margin: 0 auto; }
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);z-index:300;display:flex;align-items:flex-end;justify-content:center;padding:0}
+.modal-overlay.hidden{display:none}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:18px 18px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom,0px));width:100%;max-width:520px;max-height:90dvh;overflow-y:auto}
+.modal-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px}
+.modal-title{font-size:17px;font-weight:600;margin-bottom:16px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+.field input,.field select,.field textarea{width:100%;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 13px;color:var(--text);font-size:14px;font-family:var(--font);outline:none}
+.field input:focus,.field select:focus{border-color:var(--blue)}
+.field select option{background:var(--card);color:var(--text)}
+.modal-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.parcela-row{display:none}.parcela-row.show{display:grid}
+.btn-primary{width:100%;background:var(--blue);color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:600;cursor:pointer;font-family:var(--font);margin-top:4px}
+.btn-primary:active{opacity:.8}
+.btn-tabs{display:flex;gap:6px;margin-bottom:16px}
+.btn-tab{flex:1;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:13px;font-weight:500;cursor:pointer}
+.btn-tab.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.success-msg{background:var(--green-bg);border:1px solid rgba(63,185,80,.3);color:var(--green);padding:11px;border-radius:10px;text-align:center;font-weight:600;margin-top:10px;display:none}
 
-  .section { display: none; }
-  .section.active { display: block; }
+/* ESTABELECIMENTOS */
+.estab-item{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--border)}
+.estab-item:last-child{border-bottom:none}
+.estab-nome{font-size:14px;font-weight:500}
+.estab-cat{font-size:12px;color:var(--muted);margin-top:2px}
+.estab-badge{font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;flex-shrink:0}
+.estab-badge.sim{background:rgba(63,185,80,.15);color:var(--green)}
+.estab-badge.nao{background:rgba(210,153,34,.15);color:var(--amber)}
+.alert-strip{background:var(--amber-bg);border:1px solid rgba(210,153,34,.3);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer}
+.alert-strip-icon{font-size:20px;flex-shrink:0}
 
-  /* ── CARDS ──────────────────────────────── */
-  .card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 18px;
-    margin-bottom: 14px;
-  }
+/* CHAT */
+.chat-container{display:flex;flex-direction:column;height:calc(100dvh - 220px)}
+.chat-messages{flex:1;overflow-y:auto;padding-bottom:10px}
+.msg{margin-bottom:12px;display:flex;gap:9px;align-items:flex-start}
+.msg.user{flex-direction:row-reverse}
+.msg-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;background:var(--card);border:1px solid var(--border)}
+.msg-bubble{max-width:82%;padding:10px 13px;border-radius:14px;font-size:14px;line-height:1.5}
+.msg.user .msg-bubble{background:var(--blue);color:#fff;border-bottom-right-radius:4px}
+.msg.ai .msg-bubble{background:var(--card);border:1px solid var(--border);border-bottom-left-radius:4px}
+.chat-input-row{display:flex;gap:9px;padding-top:11px;border-top:1px solid var(--border)}
+.chat-input{flex:1;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 13px;color:var(--text);font-size:14px;font-family:var(--font);outline:none;resize:none}
+.chat-input:focus{border-color:var(--blue)}
+.chat-input::placeholder{color:var(--muted)}
+.btn-send{width:40px;height:40px;border-radius:10px;background:var(--blue);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.btn-send svg{width:17px;height:17px;fill:#fff}
 
-  .card-label {
-    font-size: 12px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 600;
-    margin-bottom: 6px;
-  }
-
-  .card-value {
-    font-size: 32px;
-    font-weight: 700;
-    letter-spacing: -1px;
-    line-height: 1;
-  }
-
-  .card-value.green { color: var(--green); }
-  .card-value.red   { color: var(--red); }
-  .card-value.amber { color: var(--amber); }
-
-  .card-sub {
-    font-size: 13px;
-    color: var(--muted);
-    margin-top: 5px;
-  }
-
-  /* ── GRID 2 COLUNAS ─────────────────────── */
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
-
-  .card-sm {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px;
-  }
-
-  .card-sm .lbl { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
-  .card-sm .val { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
-
-  /* ── BARRAS DE PROGRESSO ─────────────────── */
-  .pilar-item { margin-bottom: 16px; }
-
-  .pilar-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 6px;
-  }
-
-  .pilar-name { font-size: 14px; font-weight: 500; }
-  .pilar-vals { font-size: 13px; color: var(--muted); }
-
-  .bar-track {
-    height: 8px;
-    background: var(--border);
-    border-radius: 4px;
-    overflow: hidden;
-  }
-
-  .bar-fill {
-    height: 100%;
-    border-radius: 4px;
-    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .bar-fill.ok     { background: var(--green); }
-  .bar-fill.warn   { background: var(--amber); }
-  .bar-fill.over   { background: var(--red); }
-
-  .pilar-status {
-    font-size: 12px;
-    margin-top: 4px;
-    color: var(--muted);
-  }
-  .pilar-status.ok   { color: var(--green); }
-  .pilar-status.over { color: var(--red); }
-  .pilar-status.warn { color: var(--amber); }
-
-  /* ── INSIGHTS ─────────────────────────────  */
-  .insight-card {
-    border-radius: var(--radius);
-    padding: 16px;
-    margin-bottom: 12px;
-    border: 1px solid transparent;
-  }
-
-  .insight-card.alta   { background: var(--red-bg);   border-color: rgba(248,81,73,0.25); }
-  .insight-card.media  { background: var(--amber-bg); border-color: rgba(210,153,34,0.25); }
-  .insight-card.info   { background: var(--blue-bg);  border-color: rgba(88,166,255,0.2); }
-  .insight-card.invest { background: #0D2318;          border-color: rgba(63,185,80,0.25); }
-
-  .insight-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding: 3px 8px;
-    border-radius: 6px;
-    margin-bottom: 8px;
-  }
-
-  .insight-badge.alta  { background: rgba(248,81,73,0.15);  color: var(--red); }
-  .insight-badge.media { background: rgba(210,153,34,0.15); color: var(--amber); }
-  .insight-badge.info  { background: rgba(88,166,255,0.15); color: var(--blue); }
-  .insight-badge.invest{ background: rgba(63,185,80,0.15);  color: var(--green); }
-
-  .insight-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
-  .insight-text  { font-size: 14px; color: var(--muted); line-height: 1.5; margin-bottom: 10px; }
-
-  .insight-action {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    font-size: 13px;
-    color: var(--blue);
-    background: rgba(88,166,255,0.06);
-    padding: 10px 12px;
-    border-radius: 8px;
-    border: 1px solid rgba(88,166,255,0.15);
-    line-height: 1.4;
-  }
-
-  /* ── VENCIMENTOS ───────────────────────── */
-  .venc-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 13px 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .venc-item:last-child { border-bottom: none; }
-
-  .venc-left { flex: 1; }
-  .venc-name { font-size: 14px; font-weight: 500; }
-  .venc-date { font-size: 12px; color: var(--muted); margin-top: 2px; }
-
-  .venc-right { text-align: right; }
-  .venc-val   { font-size: 15px; font-weight: 600; }
-  .venc-status {
-    display: inline-block;
-    font-size: 11px;
-    padding: 2px 7px;
-    border-radius: 5px;
-    margin-top: 3px;
-    font-weight: 600;
-  }
-  .venc-status.pendente { background: rgba(210,153,34,0.15); color: var(--amber); }
-  .venc-status.pago     { background: rgba(63,185,80,0.15);  color: var(--green); }
-  .venc-status.atrasado { background: rgba(248,81,73,0.15);  color: var(--red); }
-
-  /* ── CHAT IA ────────────────────────────── */
-  .chat-container {
-    display: flex;
-    flex-direction: column;
-    height: calc(100dvh - 200px);
-  }
-
-  .chat-messages {
-    flex: 1;
-    overflow-y: auto;
-    padding-bottom: 10px;
-  }
-
-  .msg {
-    margin-bottom: 14px;
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-  }
-
-  .msg.user { flex-direction: row-reverse; }
-
-  .msg-avatar {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    flex-shrink: 0;
-    background: var(--card);
-    border: 1px solid var(--border);
-  }
-
-  .msg-bubble {
-    max-width: 82%;
-    padding: 11px 14px;
-    border-radius: 14px;
-    font-size: 14px;
-    line-height: 1.5;
-  }
-
-  .msg.user .msg-bubble {
-    background: var(--blue);
-    color: #fff;
-    border-bottom-right-radius: 4px;
-  }
-
-  .msg.ai .msg-bubble {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-bottom-left-radius: 4px;
-    color: var(--text);
-  }
-
-  .chat-input-row {
-    display: flex;
-    gap: 10px;
-    padding-top: 12px;
-    border-top: 1px solid var(--border);
-  }
-
-  .chat-input {
-    flex: 1;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 14px;
-    color: var(--text);
-    font-size: 14px;
-    font-family: var(--font);
-    outline: none;
-    resize: none;
-  }
-  .chat-input:focus { border-color: var(--blue); }
-  .chat-input::placeholder { color: var(--muted); }
-
-  .btn-send {
-    width: 42px;
-    height: 42px;
-    border-radius: 10px;
-    background: var(--blue);
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    transition: opacity 0.15s;
-  }
-  .btn-send:active { opacity: 0.7; }
-  .btn-send svg { width: 18px; height: 18px; fill: #fff; }
-
-  /* ── METAS ──────────────────────────────── */
-  .meta-item { margin-bottom: 20px; }
-  .meta-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
-  .meta-name  { font-size: 15px; font-weight: 600; }
-  .meta-pct   { font-size: 14px; color: var(--green); font-weight: 600; }
-  .meta-vals  { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
-  .meta-track { height: 10px; background: var(--border); border-radius: 5px; overflow: hidden; }
-  .meta-fill  { height: 100%; background: var(--green); border-radius: 5px; transition: width 0.6s ease; }
-  .meta-fill.warn { background: var(--amber); }
-
-  /* ── LOADING ─────────────────────────────── */
-  .loading {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 60px 20px;
-    gap: 16px;
-    color: var(--muted);
-  }
-
-  .spinner {
-    width: 28px;
-    height: 28px;
-    border: 2.5px solid var(--border);
-    border-top-color: var(--blue);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* ── EMPTY STATE ─────────────────────────── */
-  .empty {
-    text-align: center;
-    padding: 50px 20px;
-    color: var(--muted);
-  }
-  .empty-icon { font-size: 40px; margin-bottom: 12px; }
-  .empty-text { font-size: 14px; }
-
-  /* ── SETUP MODAL ─────────────────────────── */
-  .setup-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.8);
-    backdrop-filter: blur(8px);
-    z-index: 200;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-  }
-
-  .setup-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 18px;
-    padding: 28px 24px;
-    max-width: 420px;
-    width: 100%;
-  }
-
-  .setup-title { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
-  .setup-sub   { font-size: 14px; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
-
-  .setup-label { font-size: 13px; color: var(--muted); font-weight: 600; margin-bottom: 6px; display: block; }
-
-  .setup-input {
-    width: 100%;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 11px 14px;
-    color: var(--text);
-    font-size: 14px;
-    font-family: var(--font);
-    outline: none;
-    margin-bottom: 16px;
-  }
-  .setup-input:focus { border-color: var(--blue); }
-
-  .btn-primary {
-    width: 100%;
-    background: var(--blue);
-    color: #fff;
-    border: none;
-    border-radius: 10px;
-    padding: 13px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    font-family: var(--font);
-    transition: opacity 0.15s;
-  }
-  .btn-primary:active { opacity: 0.8; }
-
-  .divider { height: 1px; background: var(--border); margin: 14px 0; }
-
-  /* ── UTILITIES ──────────────────────────── */
-  .section-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin: 24px 0 12px;
-  }
-
-  .tag {
-    display: inline-block;
-    font-size: 11px;
-    padding: 3px 8px;
-    border-radius: 6px;
-    font-weight: 600;
-  }
-
-  .refresh-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    color: var(--muted);
-    font-size: 13px;
-    cursor: pointer;
-    background: none;
-    border: none;
-    padding: 4px 0;
-    margin-bottom: 16px;
-  }
-  .refresh-btn:active { opacity: 0.6; }
-
-  .typing-dot {
-    display: inline-block;
-    width: 7px;
-    height: 7px;
-    background: var(--muted);
-    border-radius: 50%;
-    margin: 0 2px;
-    animation: bounce 1.2s infinite;
-  }
-  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes bounce {
-    0%, 60%, 100% { transform: translateY(0); }
-    30% { transform: translateY(-5px); }
-  }
+/* MISC */
+.section-title{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:20px 0 10px}
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px 20px;gap:14px;color:var(--muted)}
+.spinner{width:26px;height:26px;border:2.5px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty-icon{font-size:36px;margin-bottom:10px}
+.setup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);z-index:400;display:flex;align-items:center;justify-content:center;padding:20px}
+.setup-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:26px 22px;max-width:420px;width:100%}
+.setup-title{font-size:20px;font-weight:700;margin-bottom:5px}
+.setup-sub{font-size:14px;color:var(--muted);margin-bottom:22px;line-height:1.5}
+.setup-label{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:5px;display:block}
+.setup-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 13px;color:var(--text);font-size:14px;font-family:var(--font);outline:none;margin-bottom:14px}
+.setup-input:focus{border-color:var(--blue)}
+.typing-dot{display:inline-block;width:7px;height:7px;background:var(--muted);border-radius:50%;margin:0 2px;animation:bounce 1.2s infinite}
+.typing-dot:nth-child(2){animation-delay:.2s}.typing-dot:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
 </style>
 </head>
 <body>
 
-<!-- SETUP MODAL -->
+<!-- SETUP -->
 <div class="setup-overlay" id="setupOverlay">
   <div class="setup-card">
     <div class="setup-title">💰 Finanças</div>
-    <div class="setup-sub">Configure uma vez para conectar ao seu Google Sheets e à IA.</div>
-
+    <div class="setup-sub">Configure uma vez para conectar ao Google Sheets.</div>
     <label class="setup-label">ID da Planilha Google Sheets</label>
-    <input class="setup-input" id="inputSheetId" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs..." />
-
+    <input class="setup-input" id="inputSheetId" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUq..."/>
     <label class="setup-label">URL do Apps Script (Web App)</label>
-    <input class="setup-input" id="inputScriptUrl" placeholder="https://script.google.com/macros/s/..." />
-
-    <label class="setup-label">Seu nome (usuário)</label>
-    <input class="setup-input" id="inputUserName" placeholder="Você" />
-
+    <input class="setup-input" id="inputScriptUrl" placeholder="https://script.google.com/macros/s/..."/>
+    <label class="setup-label">Token secreto</label>
+    <input class="setup-input" id="inputSecret" type="password" placeholder="Seu token de segurança"/>
+    <label class="setup-label">Seu nome</label>
+    <input class="setup-input" id="inputUserName" placeholder="Você"/>
     <button class="btn-primary" onclick="salvarConfig()">Começar →</button>
-
-    <div style="margin-top:14px; font-size:12px; color:var(--muted); line-height:1.5; text-align:center;">
-      O ID da planilha está na URL do Sheets após /d/<br>
-      O Apps Script URL é gerado ao publicar como Web App
-    </div>
   </div>
 </div>
 
 <!-- HEADER -->
 <header>
-  <div class="logo">
-    <div class="logo-dot"></div>
-    Finanças
-  </div>
-  <div class="header-right">
-    <span id="headerUser" style="font-size:13px; color:var(--muted)"></span>
+  <div class="logo"><div class="logo-dot"></div>Finanças</div>
+  <div class="header-nav">
     <button class="btn-sm" onclick="mudarMes(-1)">‹</button>
-    <button class="btn-sm" id="btnMes" onclick="mudarMes(0)" style="min-width:80px"></button>
+    <button class="btn-sm" id="btnMes" onclick="mudarMes(0)"></button>
     <button class="btn-sm" onclick="mudarMes(1)">›</button>
   </div>
 </header>
 
 <!-- TABS -->
 <div class="tabs">
-  <button class="tab active" onclick="ativarTab('visao')" id="tab-visao">Visão Geral</button>
-  <button class="tab" onclick="ativarTab('pilares')" id="tab-pilares">Pilares</button>
-  <button class="tab" onclick="ativarTab('vencimentos')" id="tab-vencimentos">Vencimentos</button>
-  <button class="tab" onclick="ativarTab('insights')" id="tab-insights">Insights IA</button>
-  <button class="tab" onclick="ativarTab('metas')" id="tab-metas">Metas</button>
-  <button class="tab" onclick="ativarTab('chat')" id="tab-chat">Chat IA</button>
+  <button class="tab active" onclick="ativarTab('visao')"        id="tab-visao">Visão Geral</button>
+  <button class="tab"        onclick="ativarTab('pilares')"      id="tab-pilares">Pilares</button>
+  <button class="tab"        onclick="ativarTab('vencimentos')"  id="tab-vencimentos">Vencimentos</button>
+  <button class="tab"        onclick="ativarTab('insights')"     id="tab-insights">Insights IA</button>
+  <button class="tab"        onclick="ativarTab('metas')"        id="tab-metas">Metas</button>
+  <button class="tab"        onclick="ativarTab('estab')"        id="tab-estab">Estabelec.</button>
+  <button class="tab"        onclick="ativarTab('chat')"         id="tab-chat">Chat IA</button>
 </div>
 
 <main>
-
-  <!-- ── VISÃO GERAL ─── -->
-  <div class="section active" id="section-visao">
-    <div id="visaoContent">
-      <div class="loading"><div class="spinner"></div>Carregando...</div>
-    </div>
-  </div>
-
-  <!-- ── PILARES ─── -->
-  <div class="section" id="section-pilares">
-    <div id="pilaresContent">
-      <div class="loading"><div class="spinner"></div>Carregando...</div>
-    </div>
-  </div>
-
-  <!-- ── VENCIMENTOS ─── -->
-  <div class="section" id="section-vencimentos">
-    <div id="vencimentosContent">
-      <div class="loading"><div class="spinner"></div>Carregando...</div>
-    </div>
-  </div>
-
-  <!-- ── INSIGHTS ─── -->
-  <div class="section" id="section-insights">
-    <div id="insightsContent">
-      <div class="loading"><div class="spinner"></div>Carregando...</div>
-    </div>
-  </div>
-
-  <!-- ── METAS ─── -->
-  <div class="section" id="section-metas">
-    <div id="metasContent">
-      <div class="loading"><div class="spinner"></div>Carregando...</div>
-    </div>
-  </div>
-
-  <!-- ── CHAT IA ─── -->
+  <div class="section active" id="section-visao"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+  <div class="section" id="section-pilares"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+  <div class="section" id="section-vencimentos"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+  <div class="section" id="section-insights"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+  <div class="section" id="section-metas"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+  <div class="section" id="section-estab"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
   <div class="section" id="section-chat">
     <div class="chat-container">
       <div class="chat-messages" id="chatMessages">
         <div class="msg ai">
           <div class="msg-avatar">🤖</div>
-          <div class="msg-bubble">
-            Olá! Sou sua IA financeira. Tenho acesso aos seus dados do Sheets e posso responder perguntas como:<br><br>
-            • <em>Quanto gastei com delivery este mês?</em><br>
-            • <em>Qual minha categoria mais cara?</em><br>
-            • <em>Estou no caminho certo para minha reserva?</em><br>
-            • <em>Onde posso cortar gastos?</em>
-          </div>
+          <div class="msg-bubble">Olá! Pergunte sobre seus gastos, categorias, metas ou peça sugestões de investimento.</div>
         </div>
       </div>
       <div class="chat-input-row">
         <textarea class="chat-input" id="chatInput" rows="1" placeholder="Pergunte sobre suas finanças..."
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarMsg()}"
           oninput="autoResize(this)"></textarea>
-        <button class="btn-send" onclick="enviarMsg()">
-          <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-        </button>
+        <button class="btn-send" onclick="enviarMsg()"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
       </div>
     </div>
   </div>
-
 </main>
 
+<!-- FAB -->
+<button class="fab" onclick="abrirModal()" title="Novo lançamento">
+  <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+</button>
+
+<!-- MODAL CADASTRO -->
+<div class="modal-overlay hidden" id="modalOverlay" onclick="fecharModalFora(event)">
+  <div class="modal" id="modalContent">
+    <div class="modal-handle"></div>
+    <div class="modal-title">➕ Novo lançamento</div>
+
+    <div class="btn-tabs">
+      <button class="btn-tab active" onclick="setModalTipo('gasto')"  id="btab-gasto">💸 Gasto</button>
+      <button class="btn-tab"        onclick="setModalTipo('receita')" id="btab-receita">💰 Receita</button>
+      <button class="btn-tab"        onclick="setModalTipo('fixo')"    id="btab-fixo">📌 Fixo/Boleto</button>
+    </div>
+
+    <!-- GASTO / RECEITA -->
+    <div id="form-gasto">
+      <div class="modal-grid2">
+        <div class="field"><label>Data</label><input type="date" id="f-data"/></div>
+        <div class="field"><label>Valor (R$)</label><input type="number" id="f-valor" placeholder="0,00" step="0.01" min="0"/></div>
+      </div>
+      <div class="field"><label>Descrição</label><input type="text" id="f-desc" placeholder="Ex: iFood, Supermercado..."/></div>
+      <div class="field"><label>Pilar</label><select id="f-pilar" onchange="atualizarCats()"></select></div>
+      <div class="field"><label>Categoria</label><select id="f-cat"></select></div>
+      <div class="modal-grid2">
+        <div class="field"><label>Pagamento</label><select id="f-meio"></select></div>
+        <div class="field"><label>Usuário</label><select id="f-usuario"></select></div>
+      </div>
+      <div class="field"><label>Parcelas?</label>
+        <select id="f-temParcela" onchange="toggleParcelas()">
+          <option value="nao">Não</option>
+          <option value="sim">Sim — parcelado</option>
+        </select>
+      </div>
+      <div class="modal-grid2 parcela-row" id="f-parcelaRow">
+        <div class="field"><label>Parcela atual</label><input type="number" id="f-parcAtual" value="1" min="1"/></div>
+        <div class="field"><label>Total</label><input type="number" id="f-parcTotal" value="2" min="2"/></div>
+      </div>
+      <div class="field"><label>Observação</label><input type="text" id="f-obs" placeholder="Opcional..."/></div>
+      <button class="btn-primary" onclick="salvarGasto()">Salvar lançamento</button>
+      <div class="success-msg" id="f-success">✅ Salvo com sucesso!</div>
+    </div>
+
+    <!-- FIXO / BOLETO / CARNÊ -->
+    <div id="form-fixo" style="display:none">
+      <div class="field"><label>Tipo</label>
+        <select id="ff-tipo">
+          <option value="fixo">🔄 Gasto fixo (mensal)</option>
+          <option value="boleto">📄 Boleto avulso</option>
+          <option value="carne">🗂️ Carnê / parcelado</option>
+        </select>
+      </div>
+      <div class="field"><label>Descrição</label><input type="text" id="ff-desc" placeholder="Ex: IPTU, Carnê C&A..."/></div>
+      <div class="modal-grid2">
+        <div class="field"><label>Valor (R$)</label><input type="number" id="ff-valor" step="0.01" min="0" placeholder="0,00"/></div>
+        <div class="field"><label>Dia do mês</label><input type="number" id="ff-dia" min="1" max="31" placeholder="Ex: 10"/></div>
+      </div>
+      <div class="field"><label>Pilar</label><select id="ff-pilar" onchange="atualizarCatsFixo()"></select></div>
+      <div class="field"><label>Categoria</label><select id="ff-cat"></select></div>
+      <div class="modal-grid2">
+        <div class="field"><label>Pagamento</label><select id="ff-meio"></select></div>
+        <div class="field"><label>Usuário</label><select id="ff-usuario"></select></div>
+      </div>
+      <div class="modal-grid2 parcela-row" id="ff-carneRow" style="display:none">
+        <div class="field"><label>Parcela inicial</label><input type="number" id="ff-parcIni" value="1" min="1"/></div>
+        <div class="field"><label>Total parcelas</label><input type="number" id="ff-parcTot" value="12" min="1"/></div>
+      </div>
+      <div class="field"><label>Observação</label><input type="text" id="ff-obs" placeholder="Opcional..."/></div>
+      <button class="btn-primary" onclick="salvarFixo()">Salvar</button>
+      <div class="success-msg" id="ff-success">✅ Salvo com sucesso!</div>
+    </div>
+  </div>
+</div>
+
 <script>
-// ── CONFIG & STATE ──────────────────────────────────────────
-const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
-               'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-const MESES_CURTOS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+// ── CONFIG ──────────────────────────────────────────────────
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MESES_C = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+const PILARES_META = {Necessidades:.50,Lazer:.10,Reserva:.10,Investimento:.20,Metas:.05,'Doações':.05};
+const PILARES_ICONE = {Necessidades:'🏠',Lazer:'🎉',Reserva:'🛡️',Investimento:'📈',Metas:'🎯','Doações':'🤝'};
+
+const CATS = {
+  Necessidades:['Moradia/Aluguel','Condomínio','Água','Luz','Gás','Internet','Celular','Supermercado','Farmácia','Transporte','Combustível','Plano de Saúde','Médico'],
+  Lazer:['Restaurantes','Delivery','Streaming','Cinema/Teatro','Viagens','Hobbies','Academia','Bares/Baladas','Jogos'],
+  Reserva:['Reserva Emergência','Poupança'],
+  Investimento:['Tesouro Direto','CDB/LCI/LCA','Fundos','Ações','FIIs','Criptomoedas','Previdência Privada'],
+  Metas:['Meta: Viagem','Meta: Carro','Meta: Imóvel','Meta: Educação','Meta: Outros'],
+  'Doações':['Doação','Presente','Ajuda Familiar'],
+  Receita:['Salário','Freelance','Renda Extra','Rendimento Investimentos','Outros'],
+};
+const MEIOS = ['Débito','Crédito Nubank','Crédito Itaú','Crédito Bradesco','Crédito Inter','Crédito BB','PIX','Dinheiro','TED/DOC','Boleto'];
+const USUARIOS = ['Você','Namorada','Irmão'];
 
 let CFG = {
-  sheetId: localStorage.getItem('fin_sheetId') || '',
+  sheetId:   localStorage.getItem('fin_sheetId') || '',
   scriptUrl: localStorage.getItem('fin_scriptUrl') || '',
-  userName: localStorage.getItem('fin_userName') || 'Você',
+  secret:    localStorage.getItem('fin_secret') || '',
+  userName:  localStorage.getItem('fin_userName') || 'Você',
 };
+let ESTADO = { mesIdx: new Date().getMonth(), ano: new Date().getFullYear(), dados: null };
+let modalTipo = 'gasto';
 
-let ESTADO = {
-  mesIdx: new Date().getMonth(),
-  ano: new Date().getFullYear(),
-  dados: null,
-};
-
-const PILARES_META = {
-  'Necessidades': 0.50,
-  'Lazer':        0.10,
-  'Reserva':      0.10,
-  'Investimento': 0.20,
-  'Metas':        0.05,
-  'Doações':      0.05,
-};
-
-const PILARES_ICONE = {
-  'Necessidades': '🏠',
-  'Lazer':        '🎉',
-  'Reserva':      '🛡️',
-  'Investimento': '📈',
-  'Metas':        '🎯',
-  'Doações':      '🤝',
-};
-
-// ── INIT ────────────────────────────────────────────────────
+// ── INIT ─────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   atualizarBotaoMes();
-  document.getElementById('headerUser').textContent = CFG.userName;
-
+  preencherSelects();
   if (!CFG.sheetId || !CFG.scriptUrl) {
     document.getElementById('setupOverlay').style.display = 'flex';
   } else {
     document.getElementById('setupOverlay').style.display = 'none';
     carregarDados();
   }
+  // data default
+  document.getElementById('f-data').value = new Date().toISOString().split('T')[0];
 });
 
 function salvarConfig() {
   CFG.sheetId   = document.getElementById('inputSheetId').value.trim();
   CFG.scriptUrl = document.getElementById('inputScriptUrl').value.trim();
+  CFG.secret    = document.getElementById('inputSecret').value.trim();
   CFG.userName  = document.getElementById('inputUserName').value.trim() || 'Você';
-
-  if (!CFG.sheetId || !CFG.scriptUrl) {
-    alert('Preencha o ID da planilha e a URL do Apps Script.');
-    return;
-  }
-
-  localStorage.setItem('fin_sheetId',   CFG.sheetId);
-  localStorage.setItem('fin_scriptUrl', CFG.scriptUrl);
-  localStorage.setItem('fin_userName',  CFG.userName);
-
-  document.getElementById('headerUser').textContent = CFG.userName;
+  if (!CFG.sheetId || !CFG.scriptUrl) { alert('Preencha o ID da planilha e a URL.'); return; }
+  ['sheetId','scriptUrl','secret','userName'].forEach(k => localStorage.setItem('fin_'+k, CFG[k]));
   document.getElementById('setupOverlay').style.display = 'none';
   carregarDados();
 }
 
+function preencherSelects() {
+  const pilares = Object.keys(CATS);
+  ['f-pilar','ff-pilar'].forEach(id => {
+    const sel = document.getElementById(id);
+    pilares.forEach(p => { const o = document.createElement('option'); o.value = o.textContent = p; sel.appendChild(o); });
+  });
+  MEIOS.forEach(m => {
+    ['f-meio','ff-meio'].forEach(id => { const o = document.createElement('option'); o.textContent = m; document.getElementById(id).appendChild(o); });
+  });
+  USUARIOS.forEach(u => {
+    ['f-usuario','ff-usuario'].forEach(id => { const o = document.createElement('option'); o.textContent = u; document.getElementById(id).appendChild(o); });
+  });
+  atualizarCats(); atualizarCatsFixo();
+}
+
+function atualizarCats() {
+  const pilar = document.getElementById('f-pilar').value;
+  const sel = document.getElementById('f-cat');
+  sel.innerHTML = (CATS[pilar]||[]).map(c=>`<option>${c}</option>`).join('');
+}
+function atualizarCatsFixo() {
+  const pilar = document.getElementById('ff-pilar').value;
+  const sel = document.getElementById('ff-cat');
+  sel.innerHTML = (CATS[pilar]||[]).map(c=>`<option>${c}</option>`).join('');
+}
+
 // ── NAVEGAÇÃO ────────────────────────────────────────────────
 function ativarTab(id) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.getElementById('tab-' + id).classList.add('active');
-  document.getElementById('section-' + id).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  document.getElementById('section-'+id).classList.add('active');
 }
 
-function mudarMes(delta) {
-  if (delta === 0) {
-    ESTADO.mesIdx = new Date().getMonth();
-    ESTADO.ano    = new Date().getFullYear();
-  } else {
-    ESTADO.mesIdx += delta;
-    if (ESTADO.mesIdx < 0)  { ESTADO.mesIdx = 11; ESTADO.ano--; }
-    if (ESTADO.mesIdx > 11) { ESTADO.mesIdx = 0;  ESTADO.ano++; }
+function mudarMes(d) {
+  if (d===0) { ESTADO.mesIdx=new Date().getMonth(); ESTADO.ano=new Date().getFullYear(); }
+  else {
+    ESTADO.mesIdx+=d;
+    if(ESTADO.mesIdx<0){ESTADO.mesIdx=11;ESTADO.ano--;}
+    if(ESTADO.mesIdx>11){ESTADO.mesIdx=0;ESTADO.ano++;}
   }
-  atualizarBotaoMes();
-  carregarDados();
+  atualizarBotaoMes(); carregarDados();
+}
+function atualizarBotaoMes(){
+  document.getElementById('btnMes').textContent=MESES_C[ESTADO.mesIdx]+'/'+ESTADO.ano;
 }
 
-function atualizarBotaoMes() {
-  const agora = new Date();
-  const isMesAtual = ESTADO.mesIdx === agora.getMonth() && ESTADO.ano === agora.getFullYear();
-  document.getElementById('btnMes').textContent =
-    (isMesAtual ? '' : '') + MESES_CURTOS[ESTADO.mesIdx] + '/' + ESTADO.ano;
+// ── MODAL ────────────────────────────────────────────────────
+function abrirModal() { document.getElementById('modalOverlay').classList.remove('hidden'); }
+function fecharModal() { document.getElementById('modalOverlay').classList.add('hidden'); }
+function fecharModalFora(e) { if(e.target===document.getElementById('modalOverlay')) fecharModal(); }
+
+function setModalTipo(tipo) {
+  modalTipo = tipo;
+  document.querySelectorAll('.btn-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('btab-'+tipo).classList.add('active');
+  document.getElementById('form-gasto').style.display = tipo==='fixo' ? 'none' : 'block';
+  document.getElementById('form-fixo').style.display  = tipo==='fixo' ? 'block' : 'none';
+  if(tipo==='receita') {
+    document.getElementById('f-pilar').value = 'Receita'; atualizarCats();
+  }
 }
 
-// ── CARGA DE DADOS DO SHEETS ─────────────────────────────────
-// O Sheets precisa estar publicado como web: Arquivo > Compartilhar > Publicar na web (CSV por aba)
-// URLs das abas são montadas dinamicamente pelo sheetId + nome da aba
+function toggleParcelas() {
+  const show = document.getElementById('f-temParcela').value==='sim';
+  document.getElementById('f-parcelaRow').style.display = show ? 'grid' : 'none';
+}
 
+// ── SALVAR GASTO (via Apps Script Web App) ───────────────────
+async function salvarGasto() {
+  const data     = document.getElementById('f-data').value;
+  const valor    = parseFloat(document.getElementById('f-valor').value);
+  const desc     = document.getElementById('f-desc').value.trim();
+  const tipo     = modalTipo === 'receita' ? 'Receita' : 'Despesa';
+  const pilar    = document.getElementById('f-pilar').value;
+  const cat      = document.getElementById('f-cat').value;
+  const meio     = document.getElementById('f-meio').value;
+  const usuario  = document.getElementById('f-usuario').value;
+  const temParc  = document.getElementById('f-temParcela').value==='sim';
+  const pAtual   = parseInt(document.getElementById('f-parcAtual').value)||1;
+  const pTotal   = parseInt(document.getElementById('f-parcTotal').value)||1;
+  const obs      = document.getElementById('f-obs').value.trim();
+
+  if(!data||!valor||!desc){alert('Preencha data, valor e descrição.');return;}
+
+  const obsFinal = temParc ? `Parcela ${pAtual}/${pTotal}${obs?' — '+obs:''}` : obs;
+  const valorFinal = tipo==='Receita' ? Math.abs(valor) : -Math.abs(valor);
+
+  await chamarScript('salvarTransacaoDoFormulario', {
+    data, valor: valorFinal, descricao: desc, tipo, pilar, categoria: cat, meio, usuario, obs: obsFinal
+  });
+
+  mostrarSucesso('f-success');
+  document.getElementById('f-desc').value='';
+  document.getElementById('f-valor').value='';
+  document.getElementById('f-obs').value='';
+  setTimeout(()=>{ fecharModal(); carregarDados(); }, 1200);
+}
+
+async function salvarFixo() {
+  const tipoComp = document.getElementById('ff-tipo').value;
+  const desc     = document.getElementById('ff-desc').value.trim();
+  const valor    = parseFloat(document.getElementById('ff-valor').value);
+  const dia      = parseInt(document.getElementById('ff-dia').value);
+  const pilar    = document.getElementById('ff-pilar').value;
+  const cat      = document.getElementById('ff-cat').value;
+  const meio     = document.getElementById('ff-meio').value;
+  const usuario  = document.getElementById('ff-usuario').value;
+  const parcIni  = parseInt(document.getElementById('ff-parcIni').value)||1;
+  const parcTot  = parseInt(document.getElementById('ff-parcTot').value)||1;
+  const obs      = document.getElementById('ff-obs').value.trim();
+
+  if(!desc||!valor||!dia){alert('Preencha descrição, valor e dia.');return;}
+
+  await chamarScript('salvarGastoFixoDoFormulario', {tipoComp, desc, valor, dia, pilar, cat, meio, usuario, obs, parcIni, parcTot});
+  mostrarSucesso('ff-success');
+  setTimeout(()=>{ fecharModal(); carregarDados(); }, 1200);
+}
+
+async function chamarScript(acao, payload) {
+  const resp = await fetch(CFG.scriptUrl, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ acao, secret: CFG.secret, sheetId: CFG.sheetId, ...payload })
+  });
+  return resp.json();
+}
+
+function mostrarSucesso(id) {
+  const el = document.getElementById(id);
+  el.style.display='block';
+  setTimeout(()=>el.style.display='none', 2000);
+}
+
+// ── CARGA DE DADOS ──────────────────────────────────────────
 async function carregarDados() {
   try {
-    const [transacoes, vencimentos, metas, insights] = await Promise.all([
-      buscarAba('Transações'),
-      buscarAba('Vencimentos'),
-      buscarAba('Metas'),
-      buscarAba('Insights'),
+    const [trans, venc, metas, insights, estab] = await Promise.all([
+      buscarAba('Transações'), buscarAba('Vencimentos'),
+      buscarAba('Metas'), buscarAba('Insights'), buscarAba('Estabelecimentos'),
     ]);
-
-    const mesStr = MESES_CURTOS[ESTADO.mesIdx] + '/' + ESTADO.ano;
-
-    ESTADO.dados = processarDados(transacoes, vencimentos, metas, insights, mesStr);
+    const mesStr = MESES_C[ESTADO.mesIdx]+'/'+ESTADO.ano;
+    ESTADO.dados = processarDados(trans, venc, metas, insights, estab, mesStr);
     renderizarTudo();
-
-  } catch (e) {
-    console.error('Erro ao carregar dados:', e);
-    document.getElementById('visaoContent').innerHTML =
-      `<div class="empty"><div class="empty-icon">⚠️</div>
-       <div class="empty-text">Não foi possível carregar os dados.<br>Verifique se a planilha está publicada na web.</div></div>`;
+  } catch(e) {
+    console.error(e);
+    document.getElementById('section-visao').innerHTML =
+      `<div class="empty"><div class="empty-icon">⚠️</div><div>Erro ao carregar dados.<br>Verifique se a planilha está publicada na web.</div></div>`;
   }
 }
 
-async function buscarAba(nomeAba) {
-  // Usa a API de exportação pública do Sheets (CSV)
-  // A planilha DEVE estar publicada em: Arquivo > Compartilhar > Publicar na web
-  const url = `https://docs.google.com/spreadsheets/d/${CFG.sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(nomeAba)}`;
-
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error('Falha ao buscar aba: ' + nomeAba);
-  const csv  = await resp.text();
-  return parsearCSV(csv);
+async function buscarAba(nome) {
+  const url = `https://docs.google.com/spreadsheets/d/${CFG.sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(nome)}`;
+  const r = await fetch(url);
+  if(!r.ok) throw new Error('Falha: '+nome);
+  return parsearCSV(await r.text());
 }
 
 function parsearCSV(csv) {
-  const linhas = csv.split('\n').filter(l => l.trim());
-  return linhas.map(linha => {
-    const cols = [];
-    let dentro = false, val = '';
-    for (let c of linha) {
-      if (c === '"') { dentro = !dentro; continue; }
-      if (c === ',' && !dentro) { cols.push(val.trim()); val = ''; }
-      else val += c;
+  return csv.split('\n').filter(l=>l.trim()).map(linha=>{
+    const cols=[]; let dentro=false, val='';
+    for(let c of linha){
+      if(c==='"'){dentro=!dentro;continue;}
+      if(c===','&&!dentro){cols.push(val.trim());val='';}
+      else val+=c;
     }
-    cols.push(val.trim());
-    return cols;
+    cols.push(val.trim()); return cols;
   });
 }
 
-// ── PROCESSAMENTO DE DADOS ───────────────────────────────────
-function processarDados(transacoes, vencimentos, metas, insights, mesStr) {
-  const linhasTrans  = transacoes.slice(1).filter(r => r[0] && r[2]);
-  const transMes     = linhasTrans.filter(r => r[9] === mesStr);
+// ── PROCESSAMENTO ────────────────────────────────────────────
+function processarDados(trans, venc, metas, insights, estab, mesStr) {
+  const linhasTrans = trans.slice(1).filter(r=>r[0]&&r[2]);
+  const transMes    = linhasTrans.filter(r=>r[9]===mesStr);
 
-  const receita = transMes.filter(r => r[3] === 'Receita')
-    .reduce((s, r) => s + parseFloat(r[2].replace(/[^0-9.-]/g,'')) || 0, 0);
+  const receita = transMes.filter(r=>r[3]==='Receita')
+    .reduce((s,r)=>s+num(r[2]),0);
 
-  const despesas = transMes.filter(r => r[3] === 'Despesa');
-  const totalDesp = despesas.reduce((s, r) => s + Math.abs(parseFloat(r[2].replace(/[^0-9.-]/g,'')) || 0), 0);
+  const despesas = transMes.filter(r=>r[3]==='Despesa');
+  const totalDesp = despesas.reduce((s,r)=>s+Math.abs(num(r[2])),0);
 
   const gastosPorPilar = {};
-  Object.keys(PILARES_META).forEach(p => gastosPorPilar[p] = 0);
-  despesas.forEach(r => {
-    const pilar = r[4];
-    if (gastosPorPilar[pilar] !== undefined)
-      gastosPorPilar[pilar] += Math.abs(parseFloat(r[2].replace(/[^0-9.-]/g,'')) || 0);
-  });
+  Object.keys(PILARES_META).forEach(p=>gastosPorPilar[p]=0);
+  despesas.forEach(r=>{const p=r[4];if(p in gastosPorPilar)gastosPorPilar[p]+=Math.abs(num(r[2]));});
 
-  const gastosPorCat = {};
-  despesas.forEach(r => {
-    const cat = r[5] || 'Outros';
-    gastosPorCat[cat] = (gastosPorCat[cat] || 0) + Math.abs(parseFloat(r[2].replace(/[^0-9.-]/g,'')) || 0);
-  });
+  const gastosCat={};
+  despesas.forEach(r=>{const c=r[5]||'Outros';gastosCat[c]=(gastosCat[c]||0)+Math.abs(num(r[2]));});
+  const topCats = Object.entries(gastosCat).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([cat,val])=>({cat,val}));
 
-  const topCats = Object.entries(gastosPorCat)
-    .sort((a,b) => b[1]-a[1]).slice(0,8)
-    .map(([cat, val]) => ({ cat, val }));
+  const hoje=new Date(); hoje.setHours(0,0,0,0);
+  const em30=new Date(hoje.getTime()+30*864e5);
+  const vencProximos = venc.slice(1).filter(r=>r[0]).map(r=>({
+    nome:r[0],tipo:r[1],valor:Math.abs(num(r[2])),vencimento:r[8],status:r[7]||'Pendente',banco:r[5]
+  })).filter(v=>{
+    if(!v.vencimento) return false;
+    const d=new Date(v.vencimento); return d>=hoje&&d<=em30&&v.status!=='Pago';
+  }).sort((a,b)=>new Date(a.vencimento)-new Date(b.vencimento));
 
-  // Vencimentos
-  const hoje = new Date();
-  const em30 = new Date(hoje.getTime() + 30*24*60*60*1000);
-  const linhasVenc = vencimentos.slice(1).filter(r => r[0]);
-  const vencProximos = linhasVenc
-    .filter(r => {
-      if (!r[8]) return false;
-      const d = new Date(r[8]);
-      return d >= hoje && d <= em30 && r[7] !== 'Pago';
-    })
-    .sort((a,b) => new Date(a[8]) - new Date(b[8]))
-    .map(r => ({
-      nome: r[0], tipo: r[1], valor: parseFloat(r[2]) || 0,
-      vencimento: r[8], status: r[7] || 'Pendente', banco: r[5],
-    }));
+  const totalPendente = vencProximos.reduce((s,v)=>s+v.valor,0);
 
-  const totalPendente = vencProximos.reduce((s,v) => s + v.valor, 0);
+  const metasArr = metas.slice(1).filter(r=>r[0]&&r[7]==='Em andamento').map(r=>({
+    nome:r[0],desc:r[1],total:num(r[2]),guardado:num(r[3]),aporte:num(r[4]),prazo:r[5]
+  }));
 
-  // Metas
-  const linhasMetas = metas.slice(1).filter(r => r[0] && r[7] === 'Em andamento')
-    .map(r => ({
-      nome: r[0], desc: r[1],
-      total: parseFloat(r[2]) || 0,
-      guardado: parseFloat(r[3]) || 0,
-      aporte: parseFloat(r[4]) || 0,
-      prazo: r[5], prioridade: r[6],
-    }));
+  const insightsArr = insights.slice(1).filter(r=>r[0]).reverse().slice(0,10).map(r=>({
+    data:r[0],tipo:r[1],prioridade:r[2],titulo:r[3],analise:r[4],acao:r[5],status:r[6]
+  }));
 
-  // Insights IA (últimos 10)
-  const linhasInsights = insights.slice(1).filter(r => r[0])
-    .reverse().slice(0, 10)
-    .map(r => ({
-      data: r[0], tipo: r[1], prioridade: r[2],
-      titulo: r[3], analise: r[4], acao: r[5], status: r[6],
-    }));
+  // Estabelecimentos
+  const totalEstab = estab.slice(1).filter(r=>r[0]).length;
+  const naoMapeados = estab.slice(1).filter(r=>r[8]==='Não'&&r[0]);
+  const estabArr = estab.slice(1).filter(r=>r[0]).map(r=>({
+    nome:r[0],amigavel:r[1],pilar:r[2],cat:r[3],vezes:parseInt(r[6])||0,mapeado:r[8]
+  })).sort((a,b)=>b.vezes-a.vezes);
 
   return {
-    receita, totalDesp,
-    saldo: receita - totalDesp,
-    saldoAposVenc: receita - totalDesp - totalPendente,
-    gastosPorPilar, topCats,
-    vencProximos, totalPendente,
-    metas: linhasMetas,
-    insights: linhasInsights,
+    receita, totalDesp, saldo:receita-totalDesp,
+    saldoAposVenc:receita-totalDesp-totalPendente,
+    gastosPorPilar, topCats, vencProximos, totalPendente,
+    metas:metasArr, insights:insightsArr,
+    estab:estabArr, totalEstab, naoMapeados,
   };
 }
 
-// ── RENDERIZAÇÃO ─────────────────────────────────────────────
-function renderizarTudo() {
-  renderVisao();
-  renderPilares();
-  renderVencimentos();
-  renderInsights();
-  renderMetas();
+function num(v) {
+  if(typeof v==='number') return v;
+  return parseFloat((v||'0').toString().replace(/[^0-9.,-]/g,'').replace(',','.')) || 0;
 }
 
-function fmt(val) {
-  return 'R$ ' + Math.abs(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+// ── RENDER ───────────────────────────────────────────────────
+function renderizarTudo() { renderVisao(); renderPilares(); renderVencimentos(); renderInsights(); renderMetas(); renderEstab(); }
+
+function fmt(v) { return 'R$ '+Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
 function renderVisao() {
-  const d = ESTADO.dados;
-  const saldoCor = d.saldo >= 0 ? 'green' : 'red';
-  const saldoAposCor = d.saldoAposVenc >= 0 ? 'green' : 'red';
-  const pctGasto = d.receita > 0 ? Math.min(100, (d.totalDesp / d.receita) * 100) : 0;
-
-  let html = `
+  const d=ESTADO.dados;
+  const pct=d.receita>0?Math.min(100,(d.totalDesp/d.receita)*100):0;
+  let html=`
+    ${d.naoMapeados.length>0?`<div class="alert-strip" onclick="ativarTab('estab')"><span class="alert-strip-icon">🏪</span><span><strong>${d.naoMapeados.length} estabelecimento(s)</strong> precisam ser mapeados → toque para ver</span></div>`:''}
     <div class="card">
       <div class="card-label">Receita do mês</div>
       <div class="card-value green">${fmt(d.receita)}</div>
       <div class="card-sub">${MESES[ESTADO.mesIdx]} de ${ESTADO.ano}</div>
     </div>
-
     <div class="grid2">
-      <div class="card-sm">
-        <div class="lbl">Total gasto</div>
-        <div class="val" style="color:var(--red)">${fmt(d.totalDesp)}</div>
-      </div>
-      <div class="card-sm">
-        <div class="lbl">Saldo</div>
-        <div class="val" style="color:var(--${saldoCor})">${fmt(d.saldo)}</div>
-      </div>
+      <div class="card-sm"><div class="lbl">Total gasto</div><div class="val" style="color:var(--red)">${fmt(d.totalDesp)}</div></div>
+      <div class="card-sm"><div class="lbl">Saldo</div><div class="val" style="color:var(--${d.saldo>=0?'green':'red'})">${fmt(d.saldo)}</div></div>
     </div>
-
     <div class="card">
       <div class="card-label">Comprometimento da renda</div>
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
-        <span style="font-size:22px;font-weight:700">${pctGasto.toFixed(0)}%</span>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px">
+        <span style="font-size:22px;font-weight:700">${pct.toFixed(0)}%</span>
         <span style="font-size:13px;color:var(--muted)">gasto / recebido</span>
       </div>
-      <div class="bar-track">
-        <div class="bar-fill ${pctGasto > 90 ? 'over' : pctGasto > 75 ? 'warn' : 'ok'}"
-             style="width:${pctGasto}%"></div>
-      </div>
+      <div class="bar-track"><div class="bar-fill ${pct>90?'over':pct>75?'warn':'ok'}" style="width:${pct}%"></div></div>
     </div>
-
     <div class="card">
       <div class="card-label">Saldo após vencimentos (30 dias)</div>
-      <div class="card-value ${saldoAposCor}">${fmt(d.saldoAposVenc)}</div>
+      <div class="card-value ${d.saldoAposVenc>=0?'green':'red'}">${fmt(d.saldoAposVenc)}</div>
       <div class="card-sub">Desconta ${fmt(d.totalPendente)} em contas pendentes</div>
     </div>
+    <div class="section-title">Top categorias</div>`;
 
-    <div class="section-title">Top categorias de gasto</div>
-  `;
-
-  d.topCats.slice(0, 6).forEach(c => {
-    const pct = d.totalDesp > 0 ? (c.val / d.totalDesp * 100).toFixed(0) : 0;
-    html += `
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-        <div style="flex:1">
-          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-            <span style="font-size:14px">${c.cat}</span>
-            <span style="font-size:13px;color:var(--muted)">${fmt(c.val)}</span>
-          </div>
-          <div class="bar-track">
-            <div class="bar-fill ok" style="width:${pct}%"></div>
-          </div>
-        </div>
-        <span style="font-size:12px;color:var(--muted);min-width:32px;text-align:right">${pct}%</span>
-      </div>`;
+  d.topCats.slice(0,6).forEach(c=>{
+    const pct2=d.totalDesp>0?(c.val/d.totalDesp*100).toFixed(0):0;
+    html+=`<div style="margin-bottom:11px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:14px">${c.cat}</span>
+        <span style="font-size:13px;color:var(--muted)">${fmt(c.val)} · ${pct2}%</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill ok" style="width:${pct2}%"></div></div>
+    </div>`;
   });
-
-  document.getElementById('visaoContent').innerHTML = html;
+  document.getElementById('section-visao').innerHTML=html;
 }
 
 function renderPilares() {
-  const d = ESTADO.dados;
-  let html = `<div class="section-title">Modelo dos 6 pilares</div>
-    <div class="card" style="margin-bottom:20px;font-size:13px;color:var(--muted);line-height:1.6">
-      Compara seus gastos reais com as metas do modelo financeiro baseado na sua renda de <strong style="color:var(--text)">${fmt(d.receita)}</strong>.
+  const d=ESTADO.dados;
+  let html=`<div class="card" style="font-size:13px;color:var(--muted);margin-bottom:16px">Renda de referência: <strong style="color:var(--text)">${fmt(d.receita)}</strong></div>`;
+  Object.entries(PILARES_META).forEach(([pilar,pct])=>{
+    const meta=d.receita*pct, real=d.gastosPorPilar[pilar]||0;
+    const ratio=meta>0?Math.min(120,(real/meta)*100):0;
+    const over=real>meta, diff=Math.abs(real-meta);
+    const cls=over?'over':ratio>80?'warn':'ok';
+    html+=`<div class="pilar-item">
+      <div class="pilar-header"><span class="pilar-name">${PILARES_ICONE[pilar]} ${pilar}</span><span class="pilar-vals">${fmt(real)} / ${fmt(meta)}</span></div>
+      <div class="bar-track"><div class="bar-fill ${cls}" style="width:${Math.min(100,ratio)}%"></div></div>
+      <div class="pilar-status ${cls}">${over?`⚠️ ${fmt(diff)} acima`:`✅ ${fmt(diff)} dentro da meta`}</div>
     </div>`;
-
-  Object.entries(PILARES_META).forEach(([pilar, pct]) => {
-    const meta = d.receita * pct;
-    const real = d.gastosPorPilar[pilar] || 0;
-    const ratio = meta > 0 ? Math.min(120, (real / meta) * 100) : 0;
-    const over  = real > meta;
-    const diff  = Math.abs(real - meta);
-    const status = over
-      ? `⚠️ ${fmt(diff)} acima da meta`
-      : `✅ ${fmt(diff)} dentro da meta`;
-    const cls = over ? 'over' : ratio > 80 ? 'warn' : 'ok';
-
-    html += `
-      <div class="pilar-item">
-        <div class="pilar-header">
-          <span class="pilar-name">${PILARES_ICONE[pilar]} ${pilar}</span>
-          <span class="pilar-vals">${fmt(real)} / ${fmt(meta)}</span>
-        </div>
-        <div class="bar-track">
-          <div class="bar-fill ${cls}" style="width:${Math.min(100,ratio)}%"></div>
-        </div>
-        <div class="pilar-status ${cls}">${status}</div>
-      </div>`;
   });
-
-  document.getElementById('pilaresContent').innerHTML = html;
+  document.getElementById('section-pilares').innerHTML=html;
 }
 
 function renderVencimentos() {
-  const d = ESTADO.dados;
-  let html = '';
-
-  if (d.vencimentos && d.vencimentos.length > 0) {
-    html += `<div class="card" style="margin-bottom:0;padding:0 18px">`;
-    d.vencProximos.forEach(v => {
-      const dt = new Date(v.vencimento);
-      const hoje = new Date(); hoje.setHours(0,0,0,0);
-      const diff = Math.round((dt - hoje) / (1000*60*60*24));
-      const diffStr = diff === 0 ? 'Hoje!' : diff === 1 ? 'Amanhã' : `Em ${diff} dias`;
-      const statusCls = v.status === 'Pago' ? 'pago' : v.status === 'Atrasado' ? 'atrasado' : 'pendente';
-
-      html += `
-        <div class="venc-item">
-          <div class="venc-left">
-            <div class="venc-name">${v.nome}</div>
-            <div class="venc-date">${diffStr} · ${v.banco || ''}</div>
-          </div>
-          <div class="venc-right">
-            <div class="venc-val">${v.valor > 0 ? fmt(v.valor) : 'Variável'}</div>
-            <span class="venc-status ${statusCls}">${v.status}</span>
-          </div>
-        </div>`;
-    });
-    html += '</div>';
+  const d=ESTADO.dados;
+  let html=`<div class="section-title">Próximos 30 dias</div>`;
+  if(!d.vencProximos||d.vencProximos.length===0){
+    html+=`<div class="empty"><div class="empty-icon">📅</div><div>Nenhum vencimento nos próximos 30 dias</div></div>`;
   } else {
-    html = `<div class="empty"><div class="empty-icon">📅</div>
-      <div class="empty-text">Nenhum vencimento nos próximos 30 dias</div></div>`;
+    html+=`<div class="card" style="padding:0 16px">`;
+    d.vencProximos.forEach(v=>{
+      const dt=new Date(v.vencimento); const hoje=new Date(); hoje.setHours(0,0,0,0);
+      const diff=Math.round((dt-hoje)/864e5);
+      const diffStr=diff===0?'Hoje!':diff===1?'Amanhã':`Em ${diff} dias`;
+      const sc=v.status==='Pago'?'pago':v.status==='Atrasado'?'atrasado':'pendente';
+      html+=`<div class="venc-item">
+        <div><div class="venc-nome">${v.nome}</div><div class="venc-date">${diffStr} · ${v.banco||''}</div></div>
+        <div style="text-align:right"><div class="venc-val">${v.valor>0?fmt(v.valor):'Variável'}</div><span class="venc-status ${sc}">${v.status}</span></div>
+      </div>`;
+    });
+    html+=`</div>`;
   }
-
-  document.getElementById('vencimentosContent').innerHTML =
-    `<div class="section-title">Próximos 30 dias</div>` + html;
+  document.getElementById('section-vencimentos').innerHTML=html;
 }
 
 function renderInsights() {
-  const d = ESTADO.dados;
-  let html = `<div style="font-size:13px;color:var(--muted);margin-bottom:16px">
-    Gerados automaticamente às 03:00 pela IA com base nos seus dados.</div>`;
-
-  if (!d.insights || d.insights.length === 0) {
-    html += `<div class="empty"><div class="empty-icon">🤖</div>
-      <div class="empty-text">Ainda não há insights gerados.<br>Eles aparecem após a primeira análise noturna.</div></div>`;
+  const d=ESTADO.dados;
+  let html=`<div style="font-size:13px;color:var(--muted);margin-bottom:14px">Gerados automaticamente às 03:00.</div>`;
+  if(!d.insights||d.insights.length===0){
+    html+=`<div class="empty"><div class="empty-icon">🤖</div><div>Ainda sem insights. Aparecem após a primeira análise noturna.</div></div>`;
   } else {
-    const prioClasse = p => {
-      if (p === 'Alta') return 'alta';
-      if (p === 'Média') return 'media';
-      if (p === 'Info' || p === 'Baixa') return 'info';
-      return 'info';
-    };
-
-    d.insights.forEach(ins => {
-      const cls = ins.tipo === 'Investimento' ? 'invest' : prioClasse(ins.prioridade);
-      html += `
-        <div class="insight-card ${cls}">
-          <span class="insight-badge ${cls}">${ins.tipo || 'Análise'}</span>
-          <div class="insight-title">${ins.titulo || ''}</div>
-          <div class="insight-text">${ins.analise || ''}</div>
-          ${ins.acao ? `<div class="insight-action">→ ${ins.acao}</div>` : ''}
-        </div>`;
+    d.insights.forEach(ins=>{
+      const p=(ins.prioridade||'').toLowerCase();
+      const cls=ins.tipo==='Investimento'?'invest':p;
+      html+=`<div class="insight-card ${cls}">
+        <span class="insight-badge ${cls}">${ins.tipo||'Análise'}</span>
+        <div class="insight-title">${ins.titulo||''}</div>
+        <div class="insight-text">${ins.analise||''}</div>
+        ${ins.acao?`<div class="insight-action">→ ${ins.acao}</div>`:''}
+      </div>`;
     });
   }
-
-  document.getElementById('insightsContent').innerHTML = html;
+  document.getElementById('section-insights').innerHTML=html;
 }
 
 function renderMetas() {
-  const d = ESTADO.dados;
-  let html = '';
-
-  if (!d.metas || d.metas.length === 0) {
-    html = `<div class="empty"><div class="empty-icon">🎯</div>
-      <div class="empty-text">Nenhuma meta cadastrada.<br>Adicione metas na aba Metas do Google Sheets.</div></div>`;
+  const d=ESTADO.dados;
+  let html=`<div class="section-title">Metas em andamento</div>`;
+  if(!d.metas||d.metas.length===0){
+    html+=`<div class="empty"><div class="empty-icon">🎯</div><div>Nenhuma meta cadastrada no Sheets.</div></div>`;
   } else {
-    d.metas.forEach(m => {
-      const pct = m.total > 0 ? Math.min(100, (m.guardado / m.total) * 100) : 0;
-      const mesesRestantes = m.aporte > 0 ? Math.ceil((m.total - m.guardado) / m.aporte) : '?';
-
-      html += `
-        <div class="card meta-item">
-          <div class="meta-header">
-            <div class="meta-name">${m.nome}</div>
-            <div class="meta-pct">${pct.toFixed(0)}%</div>
-          </div>
-          <div class="meta-vals">
-            ${fmt(m.guardado)} de ${fmt(m.total)} · Aporte: ${fmt(m.aporte)}/mês
-          </div>
-          <div class="meta-track">
-            <div class="meta-fill ${pct < 30 ? 'warn' : ''}" style="width:${pct}%"></div>
-          </div>
-          <div style="font-size:12px;color:var(--muted);margin-top:8px">
-            Prazo: ${m.prazo} · ~${mesesRestantes} meses restantes
-          </div>
-        </div>`;
+    d.metas.forEach(m=>{
+      const pct=m.total>0?Math.min(100,(m.guardado/m.total)*100):0;
+      const meses=m.aporte>0?Math.ceil((m.total-m.guardado)/m.aporte):'?';
+      html+=`<div class="card meta-item">
+        <div class="meta-header"><div class="meta-name">${m.nome}</div><div class="meta-pct">${pct.toFixed(0)}%</div></div>
+        <div class="meta-vals">${fmt(m.guardado)} de ${fmt(m.total)} · Aporte: ${fmt(m.aporte)}/mês</div>
+        <div class="meta-track"><div class="meta-fill ${pct<30?'warn':''}" style="width:${pct}%"></div></div>
+        <div style="font-size:12px;color:var(--muted);margin-top:7px">Prazo: ${m.prazo} · ~${meses} meses restantes</div>
+      </div>`;
     });
   }
-
-  document.getElementById('metasContent').innerHTML =
-    `<div class="section-title">Metas em andamento</div>` + html;
+  document.getElementById('section-metas').innerHTML=html;
 }
 
-// ── CHAT IA ──────────────────────────────────────────────────
+function renderEstab() {
+  const d=ESTADO.dados;
+  const nao=d.naoMapeados||[];
+  let html='';
+
+  if(nao.length>0){
+    html+=`<div class="alert-strip" style="cursor:default;margin-bottom:12px"><span class="alert-strip-icon">⚠️</span>
+      <span><strong>${nao.length} estabelecimento(s) não mapeados</strong><br><span style="font-size:12px;color:var(--muted)">Corrija no Google Sheets → aba Estabelecimentos</span></span></div>`;
+    html+=`<div class="section-title">Não mapeados</div><div class="card" style="padding:0 16px">`;
+    nao.forEach(e=>{
+      html+=`<div class="estab-item">
+        <div><div class="estab-nome">${e.nome}</div><div class="estab-cat">${e.pilar} · ${e.cat} · visto ${e.vezes}x</div></div>
+        <span class="estab-badge nao">Mapear</span>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+
+  html+=`<div class="section-title">Todos os estabelecimentos (${d.totalEstab})</div><div class="card" style="padding:0 16px">`;
+  d.estab.forEach(e=>{
+    html+=`<div class="estab-item">
+      <div><div class="estab-nome">${e.amigavel||e.nome}</div><div class="estab-cat">${e.pilar} · ${e.cat} · ${e.vezes}x</div></div>
+      <span class="estab-badge ${e.mapeado==='Sim'?'sim':'nao'}">${e.mapeado==='Sim'?'✓':'Mapear'}</span>
+    </div>`;
+  });
+  html+=`</div>`;
+  document.getElementById('section-estab').innerHTML=html;
+}
+
+// ── CHAT ─────────────────────────────────────────────────────
 async function enviarMsg() {
-  const input = document.getElementById('chatInput');
-  const pergunta = input.value.trim();
-  if (!pergunta) return;
-
-  input.value = '';
-  input.style.height = 'auto';
-  adicionarMsg('user', pergunta);
-
-  // Typing indicator
-  const typingId = 'typing-' + Date.now();
-  adicionarMsg('ai', `<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>`, typingId);
-
+  const input=document.getElementById('chatInput');
+  const pergunta=input.value.trim();
+  if(!pergunta) return;
+  input.value=''; input.style.height='auto';
+  adicionarMsg('user',pergunta);
+  const tid='typing-'+Date.now();
+  adicionarMsg('ai',`<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>`,tid);
   try {
-    const resp = await fetch(CFG.scriptUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pergunta, sheetId: CFG.sheetId }),
+    const r=await fetch(CFG.scriptUrl,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({acao:'chat',pergunta,sheetId:CFG.sheetId,secret:CFG.secret})
     });
-
-    const dados = await resp.json();
-    document.getElementById(typingId)?.remove();
-    adicionarMsg('ai', dados.resposta || 'Não obtive resposta.');
-  } catch (e) {
-    document.getElementById(typingId)?.remove();
-    adicionarMsg('ai', '⚠️ Não foi possível conectar ao servidor. Verifique a URL do Apps Script.');
+    const dados=await r.json();
+    document.getElementById(tid)?.remove();
+    adicionarMsg('ai',dados.resposta||'Sem resposta.');
+  } catch(e) {
+    document.getElementById(tid)?.remove();
+    adicionarMsg('ai','⚠️ Não foi possível conectar. Verifique a URL do Apps Script.');
   }
 }
 
-function adicionarMsg(tipo, texto, id) {
-  const chat = document.getElementById('chatMessages');
-  const div = document.createElement('div');
-  div.className = 'msg ' + tipo;
-  if (id) div.id = id;
-
-  const avatar = document.createElement('div');
-  avatar.className = 'msg-avatar';
-  avatar.textContent = tipo === 'user' ? '👤' : '🤖';
-
-  const bubble = document.createElement('div');
-  bubble.className = 'msg-bubble';
-  bubble.innerHTML = texto;
-
-  div.appendChild(avatar);
-  div.appendChild(bubble);
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
+function adicionarMsg(tipo,texto,id) {
+  const chat=document.getElementById('chatMessages');
+  const div=document.createElement('div'); div.className='msg '+tipo; if(id) div.id=id;
+  const av=document.createElement('div'); av.className='msg-avatar'; av.textContent=tipo==='user'?'👤':'🤖';
+  const b=document.createElement('div'); b.className='msg-bubble'; b.innerHTML=texto;
+  div.appendChild(av); div.appendChild(b); chat.appendChild(div); chat.scrollTop=chat.scrollHeight;
 }
 
-function autoResize(el) {
-  el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-}
+function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
 </script>
 </body>
 </html>
