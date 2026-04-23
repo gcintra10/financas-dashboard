@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="theme-color" content="#0D1117"/>
+<title>Finanças</title>
+<link rel="manifest" href="manifest.json"/>
+<style>
+  /* ── TOKENS ─────────────────────────────── */
+  :root {
+    --bg:       #0D1117;
+    --surface:  #161B22;
+    --card:     #1C2128;
+    --border:   #30363D;
+    --text:     #E6EDF3;
+    --muted:    #8B949E;
+    --green:    #3FB950;
+    --green-bg: #0D2318;
+    --red:      #F85149;
+    --red-bg:   #2D1117;
+    --amber:    #D29922;
+    --amber-bg: #261D0E;
+    --blue:     #58A6FF;
+    --blue-bg:  #0C1D35;
+    --purple:   #BC8CFF;
+    --radius:   14px;
+    --font:     'Geist', 'SF Pro Text', -apple-system, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 15px;
+    line-height: 1.5;
+    min-height: 100dvh;
+    padding-bottom: env(safe-area-inset-bottom, 24px);
+  }
+
+  /* ── HEADER ─────────────────────────────── */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(13,17,23,0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .logo {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+
+  .header-right { display: flex; gap: 10px; align-items: center; }
+
+  .btn-sm {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-sm:active { background: var(--border); }
+
+  /* ── TABS ───────────────────────────────── */
+  .tabs {
+    display: flex;
+    gap: 0;
+    padding: 12px 20px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+
+  .tab {
+    flex-shrink: 0;
+    padding: 7px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--muted);
+    background: none;
+    border: none;
+    transition: all 0.15s;
+    font-weight: 500;
+  }
+  .tab.active { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+  .tab:active { opacity: 0.7; }
+
+  /* ── MAIN ───────────────────────────────── */
+  main { padding: 20px; max-width: 520px; margin: 0 auto; }
+
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* ── CARDS ──────────────────────────────── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+
+  .card-label {
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .card-value {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    line-height: 1;
+  }
+
+  .card-value.green { color: var(--green); }
+  .card-value.red   { color: var(--red); }
+  .card-value.amber { color: var(--amber); }
+
+  .card-sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 5px;
+  }
+
+  /* ── GRID 2 COLUNAS ─────────────────────── */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+
+  .card-sm {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+
+  .card-sm .lbl { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+  .card-sm .val { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+
+  /* ── BARRAS DE PROGRESSO ─────────────────── */
+  .pilar-item { margin-bottom: 16px; }
+
+  .pilar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+  }
+
+  .pilar-name { font-size: 14px; font-weight: 500; }
+  .pilar-vals { font-size: 13px; color: var(--muted); }
+
+  .bar-track {
+    height: 8px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .bar-fill.ok     { background: var(--green); }
+  .bar-fill.warn   { background: var(--amber); }
+  .bar-fill.over   { background: var(--red); }
+
+  .pilar-status {
+    font-size: 12px;
+    margin-top: 4px;
+    color: var(--muted);
+  }
+  .pilar-status.ok   { color: var(--green); }
+  .pilar-status.over { color: var(--red); }
+  .pilar-status.warn { color: var(--amber); }
+
+  /* ── INSIGHTS ─────────────────────────────  */
+  .insight-card {
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 1px solid transparent;
+  }
+
+  .insight-card.alta   { background: var(--red-bg);   border-color: rgba(248,81,73,0.25); }
+  .insight-card.media  { background: var(--amber-bg); border-color: rgba(210,153,34,0.25); }
+  .insight-card.info   { background: var(--blue-bg);  border-color: rgba(88,166,255,0.2); }
+  .insight-card.invest { background: #0D2318;          border-color: rgba(63,185,80,0.25); }
+
+  .insight-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+  }
+
+  .insight-badge.alta  { background: rgba(248,81,73,0.15);  color: var(--red); }
+  .insight-badge.media { background: rgba(210,153,34,0.15); color: var(--amber); }
+  .insight-badge.info  { background: rgba(88,166,255,0.15); color: var(--blue); }
+  .insight-badge.invest{ background: rgba(63,185,80,0.15);  color: var(--green); }
+
+  .insight-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .insight-text  { font-size: 14px; color: var(--muted); line-height: 1.5; margin-bottom: 10px; }
+
+  .insight-action {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--blue);
+    background: rgba(88,166,255,0.06);
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(88,166,255,0.15);
+    line-height: 1.4;
+  }
+
+  /* ── VENCIMENTOS ───────────────────────── */
+  .venc-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .venc-item:last-child { border-bottom: none; }
+
+  .venc-left { flex: 1; }
+  .venc-name { font-size: 14px; font-weight: 500; }
+  .venc-date { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  .venc-right { text-align: right; }
+  .venc-val   { font-size: 15px; font-weight: 600; }
+  .venc-status {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 5px;
+    margin-top: 3px;
+    font-weight: 600;
+  }
+  .venc-status.pendente { background: rgba(210,153,34,0.15); color: var(--amber); }
+  .venc-status.pago     { background: rgba(63,185,80,0.15);  color: var(--green); }
+  .venc-status.atrasado { background: rgba(248,81,73,0.15);  color: var(--red); }
+
+  /* ── CHAT IA ────────────────────────────── */
+  .chat-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - 200px);
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 10px;
+  }
+
+  .msg {
+    margin-bottom: 14px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .msg.user { flex-direction: row-reverse; }
+
+  .msg-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+  }
+
+  .msg-bubble {
+    max-width: 82%;
+    padding: 11px 14px;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .msg.user .msg-bubble {
+    background: var(--blue);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+
+  .msg.ai .msg-bubble {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+    color: var(--text);
+  }
+
+  .chat-input-row {
+    display: flex;
+    gap: 10px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .chat-input {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: var(--font);
+    outline: none;
+    resize: none;
+  }
+  .chat-input:focus { border-color: var(--blue); }
+  .chat-input::placeholder { color: var(--muted); }
+
+  .btn-send {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: var(--blue);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: opacity 0.15s;
+  }
+  .btn-send:active { opacity: 0.7; }
+  .btn-send svg { width: 18px; height: 18px; fill: #fff; }
+
+  /* ── METAS ──────────────────────────────── */
+  .meta-item { margin-bottom: 20px; }
+  .meta-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .meta-name  { font-size: 15px; font-weight: 600; }
+  .meta-pct   { font-size: 14px; color: var(--green); font-weight: 600; }
+  .meta-vals  { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+  .meta-track { height: 10px; background: var(--border); border-radius: 5px; overflow: hidden; }
+  .meta-fill  { height: 100%; background: var(--green); border-radius: 5px; transition: width 0.6s ease; }
+  .meta-fill.warn { background: var(--amber); }
+
+  /* ── LOADING ─────────────────────────────── */
+  .loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    gap: 16px;
+    color: var(--muted);
+  }
+
+  .spinner {
+    width: 28px;
+    height: 28px;
+    border: 2.5px solid var(--border);
+    border-top-color: var(--blue);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── EMPTY STATE ─────────────────────────── */
+  .empty {
+    text-align: center;
+    padding: 50px 20px;
+    color: var(--muted);
+  }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; }
+
+  /* ── SETUP MODAL ─────────────────────────── */
+  .setup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    backdrop-filter: blur(8px);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .setup-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 28px 24px;
+    max-width: 420px;
+    width: 100%;
+  }
+
+  .setup-title { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+  .setup-sub   { font-size: 14px; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
+
+  .setup-label { font-size: 13px; color: var(--muted); font-weight: 600; margin-bottom: 6px; display: block; }
+
+  .setup-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 14px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: var(--font);
+    outline: none;
+    margin-bottom: 16px;
+  }
+  .setup-input:focus { border-color: var(--blue); }
+
+  .btn-primary {
+    width: 100%;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 13px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--font);
+    transition: opacity 0.15s;
+  }
+  .btn-primary:active { opacity: 0.8; }
+
+  .divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+  /* ── UTILITIES ──────────────────────────── */
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 24px 0 12px;
+  }
+
+  .tag {
+    display: inline-block;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+  }
+
+  .refresh-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 4px 0;
+    margin-bottom: 16px;
+  }
+  .refresh-btn:active { opacity: 0.6; }
+
+  .typing-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    background: var(--muted);
+    border-radius: 50%;
+    margin: 0 2px;
+    animation: bounce 1.2s infinite;
+  }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-5px); }
+  }
+</style>
+</head>
+<body>
+
+<!-- SETUP MODAL -->
+<div class="setup-overlay" id="setupOverlay">
+  <div class="setup-card">
+    <div class="setup-title">💰 Finanças</div>
+    <div class="setup-sub">Configure uma vez para conectar ao seu Google Sheets e à IA.</div>
+
+    <label class="setup-label">ID da Planilha Google Sheets</label>
+    <input class="setup-input" id="inputSheetId" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs..." />
+
+    <label class="setup-label">URL do Apps Script (Web App)</label>
+    <input class="setup-input" id="inputScriptUrl" placeholder="https://script.google.com/macros/s/..." />
+
+    <label class="setup-label">Seu nome (usuário)</label>
+    <input class="setup-input" id="inputUserName" placeholder="Você" />
+
+    <button class="btn-primary" onclick="salvarConfig()">Começar →</button>
+
+    <div style="margin-top:14px; font-size:12px; color:var(--muted); line-height:1.5; text-align:center;">
+      O ID da planilha está na URL do Sheets após /d/<br>
+      O Apps Script URL é gerado ao publicar como Web App
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    Finanças
+  </div>
+  <div class="header-right">
+    <span id="headerUser" style="font-size:13px; color:var(--muted)"></span>
+    <button class="btn-sm" onclick="mudarMes(-1)">‹</button>
+    <button class="btn-sm" id="btnMes" onclick="mudarMes(0)" style="min-width:80px"></button>
+    <button class="btn-sm" onclick="mudarMes(1)">›</button>
+  </div>
+</header>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab active" onclick="ativarTab('visao')" id="tab-visao">Visão Geral</button>
+  <button class="tab" onclick="ativarTab('pilares')" id="tab-pilares">Pilares</button>
+  <button class="tab" onclick="ativarTab('vencimentos')" id="tab-vencimentos">Vencimentos</button>
+  <button class="tab" onclick="ativarTab('insights')" id="tab-insights">Insights IA</button>
+  <button class="tab" onclick="ativarTab('metas')" id="tab-metas">Metas</button>
+  <button class="tab" onclick="ativarTab('chat')" id="tab-chat">Chat IA</button>
+</div>
+
+<main>
+
+  <!-- ── VISÃO GERAL ─── -->
+  <div class="section active" id="section-visao">
+    <div id="visaoContent">
+      <div class="loading"><div class="spinner"></div>Carregando...</div>
+    </div>
+  </div>
+
+  <!-- ── PILARES ─── -->
+  <div class="section" id="section-pilares">
+    <div id="pilaresContent">
+      <div class="loading"><div class="spinner"></div>Carregando...</div>
+    </div>
+  </div>
+
+  <!-- ── VENCIMENTOS ─── -->
+  <div class="section" id="section-vencimentos">
+    <div id="vencimentosContent">
+      <div class="loading"><div class="spinner"></div>Carregando...</div>
+    </div>
+  </div>
+
+  <!-- ── INSIGHTS ─── -->
+  <div class="section" id="section-insights">
+    <div id="insightsContent">
+      <div class="loading"><div class="spinner"></div>Carregando...</div>
+    </div>
+  </div>
+
+  <!-- ── METAS ─── -->
+  <div class="section" id="section-metas">
+    <div id="metasContent">
+      <div class="loading"><div class="spinner"></div>Carregando...</div>
+    </div>
+  </div>
+
+  <!-- ── CHAT IA ─── -->
+  <div class="section" id="section-chat">
+    <div class="chat-container">
+      <div class="chat-messages" id="chatMessages">
+        <div class="msg ai">
+          <div class="msg-avatar">🤖</div>
+          <div class="msg-bubble">
+            Olá! Sou sua IA financeira. Tenho acesso aos seus dados do Sheets e posso responder perguntas como:<br><br>
+            • <em>Quanto gastei com delivery este mês?</em><br>
+            • <em>Qual minha categoria mais cara?</em><br>
+            • <em>Estou no caminho certo para minha reserva?</em><br>
+            • <em>Onde posso cortar gastos?</em>
+          </div>
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <textarea class="chat-input" id="chatInput" rows="1" placeholder="Pergunte sobre suas finanças..."
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarMsg()}"
+          oninput="autoResize(this)"></textarea>
+        <button class="btn-send" onclick="enviarMsg()">
+          <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ── CONFIG & STATE ──────────────────────────────────────────
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+               'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MESES_CURTOS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+let CFG = {
+  sheetId: localStorage.getItem('fin_sheetId') || '',
+  scriptUrl: localStorage.getItem('fin_scriptUrl') || '',
+  userName: localStorage.getItem('fin_userName') || 'Você',
+};
+
+let ESTADO = {
+  mesIdx: new Date().getMonth(),
+  ano: new Date().getFullYear(),
+  dados: null,
+};
+
+const PILARES_META = {
+  'Necessidades': 0.50,
+  'Lazer':        0.10,
+  'Reserva':      0.10,
+  'Investimento': 0.20,
+  'Metas':        0.05,
+  'Doações':      0.05,
+};
+
+const PILARES_ICONE = {
+  'Necessidades': '🏠',
+  'Lazer':        '🎉',
+  'Reserva':      '🛡️',
+  'Investimento': '📈',
+  'Metas':        '🎯',
+  'Doações':      '🤝',
+};
+
+// ── INIT ────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  atualizarBotaoMes();
+  document.getElementById('headerUser').textContent = CFG.userName;
+
+  if (!CFG.sheetId || !CFG.scriptUrl) {
+    document.getElementById('setupOverlay').style.display = 'flex';
+  } else {
+    document.getElementById('setupOverlay').style.display = 'none';
+    carregarDados();
+  }
+});
+
+function salvarConfig() {
+  CFG.sheetId   = document.getElementById('inputSheetId').value.trim();
+  CFG.scriptUrl = document.getElementById('inputScriptUrl').value.trim();
+  CFG.userName  = document.getElementById('inputUserName').value.trim() || 'Você';
+
+  if (!CFG.sheetId || !CFG.scriptUrl) {
+    alert('Preencha o ID da planilha e a URL do Apps Script.');
+    return;
+  }
+
+  localStorage.setItem('fin_sheetId',   CFG.sheetId);
+  localStorage.setItem('fin_scriptUrl', CFG.scriptUrl);
+  localStorage.setItem('fin_userName',  CFG.userName);
+
+  document.getElementById('headerUser').textContent = CFG.userName;
+  document.getElementById('setupOverlay').style.display = 'none';
+  carregarDados();
+}
+
+// ── NAVEGAÇÃO ────────────────────────────────────────────────
+function ativarTab(id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  document.getElementById('section-' + id).classList.add('active');
+}
+
+function mudarMes(delta) {
+  if (delta === 0) {
+    ESTADO.mesIdx = new Date().getMonth();
+    ESTADO.ano    = new Date().getFullYear();
+  } else {
+    ESTADO.mesIdx += delta;
+    if (ESTADO.mesIdx < 0)  { ESTADO.mesIdx = 11; ESTADO.ano--; }
+    if (ESTADO.mesIdx > 11) { ESTADO.mesIdx = 0;  ESTADO.ano++; }
+  }
+  atualizarBotaoMes();
+  carregarDados();
+}
+
+function atualizarBotaoMes() {
+  const agora = new Date();
+  const isMesAtual = ESTADO.mesIdx === agora.getMonth() && ESTADO.ano === agora.getFullYear();
+  document.getElementById('btnMes').textContent =
+    (isMesAtual ? '' : '') + MESES_CURTOS[ESTADO.mesIdx] + '/' + ESTADO.ano;
+}
+
+// ── CARGA DE DADOS DO SHEETS ─────────────────────────────────
+// O Sheets precisa estar publicado como web: Arquivo > Compartilhar > Publicar na web (CSV por aba)
+// URLs das abas são montadas dinamicamente pelo sheetId + nome da aba
+
+async function carregarDados() {
+  try {
+    const [transacoes, vencimentos, metas, insights] = await Promise.all([
+      buscarAba('Transações'),
+      buscarAba('Vencimentos'),
+      buscarAba('Metas'),
+      buscarAba('Insights'),
+    ]);
+
+    const mesStr = MESES_CURTOS[ESTADO.mesIdx] + '/' + ESTADO.ano;
+
+    ESTADO.dados = processarDados(transacoes, vencimentos, metas, insights, mesStr);
+    renderizarTudo();
+
+  } catch (e) {
+    console.error('Erro ao carregar dados:', e);
+    document.getElementById('visaoContent').innerHTML =
+      `<div class="empty"><div class="empty-icon">⚠️</div>
+       <div class="empty-text">Não foi possível carregar os dados.<br>Verifique se a planilha está publicada na web.</div></div>`;
+  }
+}
+
+async function buscarAba(nomeAba) {
+  // Usa a API de exportação pública do Sheets (CSV)
+  // A planilha DEVE estar publicada em: Arquivo > Compartilhar > Publicar na web
+  const url = `https://docs.google.com/spreadsheets/d/${CFG.sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(nomeAba)}`;
+
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error('Falha ao buscar aba: ' + nomeAba);
+  const csv  = await resp.text();
+  return parsearCSV(csv);
+}
+
+function parsearCSV(csv) {
+  const linhas = csv.split('\n').filter(l => l.trim());
+  return linhas.map(linha => {
+    const cols = [];
+    let dentro = false, val = '';
+    for (let c of linha) {
+      if (c === '"') { dentro = !dentro; continue; }
+      if (c === ',' && !dentro) { cols.push(val.trim()); val = ''; }
+      else val += c;
+    }
+    cols.push(val.trim());
+    return cols;
+  });
+}
+
+// ── PROCESSAMENTO DE DADOS ───────────────────────────────────
+function processarDados(transacoes, vencimentos, metas, insights, mesStr) {
+  const linhasTrans  = transacoes.slice(1).filter(r => r[0] && r[2]);
+  const transMes     = linhasTrans.filter(r => r[9] === mesStr);
+
+  const receita = transMes.filter(r => r[3] === 'Receita')
+    .reduce((s, r) => s + parseFloat(r[2].replace(/[^0-9.-]/g,'')) || 0, 0);
+
+  const despesas = transMes.filter(r => r[3] === 'Despesa');
+  const totalDesp = despesas.reduce((s, r) => s + Math.abs(parseFloat(r[2].replace(/[^0-9.-]/g,'')) || 0), 0);
+
+  const gastosPorPilar = {};
+  Object.keys(PILARES_META).forEach(p => gastosPorPilar[p] = 0);
+  despesas.forEach(r => {
+    const pilar = r[4];
+    if (gastosPorPilar[pilar] !== undefined)
+      gastosPorPilar[pilar] += Math.abs(parseFloat(r[2].replace(/[^0-9.-]/g,'')) || 0);
+  });
+
+  const gastosPorCat = {};
+  despesas.forEach(r => {
+    const cat = r[5] || 'Outros';
+    gastosPorCat[cat] = (gastosPorCat[cat] || 0) + Math.abs(parseFloat(r[2].replace(/[^0-9.-]/g,'')) || 0);
+  });
+
+  const topCats = Object.entries(gastosPorCat)
+    .sort((a,b) => b[1]-a[1]).slice(0,8)
+    .map(([cat, val]) => ({ cat, val }));
+
+  // Vencimentos
+  const hoje = new Date();
+  const em30 = new Date(hoje.getTime() + 30*24*60*60*1000);
+  const linhasVenc = vencimentos.slice(1).filter(r => r[0]);
+  const vencProximos = linhasVenc
+    .filter(r => {
+      if (!r[8]) return false;
+      const d = new Date(r[8]);
+      return d >= hoje && d <= em30 && r[7] !== 'Pago';
+    })
+    .sort((a,b) => new Date(a[8]) - new Date(b[8]))
+    .map(r => ({
+      nome: r[0], tipo: r[1], valor: parseFloat(r[2]) || 0,
+      vencimento: r[8], status: r[7] || 'Pendente', banco: r[5],
+    }));
+
+  const totalPendente = vencProximos.reduce((s,v) => s + v.valor, 0);
+
+  // Metas
+  const linhasMetas = metas.slice(1).filter(r => r[0] && r[7] === 'Em andamento')
+    .map(r => ({
+      nome: r[0], desc: r[1],
+      total: parseFloat(r[2]) || 0,
+      guardado: parseFloat(r[3]) || 0,
+      aporte: parseFloat(r[4]) || 0,
+      prazo: r[5], prioridade: r[6],
+    }));
+
+  // Insights IA (últimos 10)
+  const linhasInsights = insights.slice(1).filter(r => r[0])
+    .reverse().slice(0, 10)
+    .map(r => ({
+      data: r[0], tipo: r[1], prioridade: r[2],
+      titulo: r[3], analise: r[4], acao: r[5], status: r[6],
+    }));
+
+  return {
+    receita, totalDesp,
+    saldo: receita - totalDesp,
+    saldoAposVenc: receita - totalDesp - totalPendente,
+    gastosPorPilar, topCats,
+    vencProximos, totalPendente,
+    metas: linhasMetas,
+    insights: linhasInsights,
+  };
+}
+
+// ── RENDERIZAÇÃO ─────────────────────────────────────────────
+function renderizarTudo() {
+  renderVisao();
+  renderPilares();
+  renderVencimentos();
+  renderInsights();
+  renderMetas();
+}
+
+function fmt(val) {
+  return 'R$ ' + Math.abs(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function renderVisao() {
+  const d = ESTADO.dados;
+  const saldoCor = d.saldo >= 0 ? 'green' : 'red';
+  const saldoAposCor = d.saldoAposVenc >= 0 ? 'green' : 'red';
+  const pctGasto = d.receita > 0 ? Math.min(100, (d.totalDesp / d.receita) * 100) : 0;
+
+  let html = `
+    <div class="card">
+      <div class="card-label">Receita do mês</div>
+      <div class="card-value green">${fmt(d.receita)}</div>
+      <div class="card-sub">${MESES[ESTADO.mesIdx]} de ${ESTADO.ano}</div>
+    </div>
+
+    <div class="grid2">
+      <div class="card-sm">
+        <div class="lbl">Total gasto</div>
+        <div class="val" style="color:var(--red)">${fmt(d.totalDesp)}</div>
+      </div>
+      <div class="card-sm">
+        <div class="lbl">Saldo</div>
+        <div class="val" style="color:var(--${saldoCor})">${fmt(d.saldo)}</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Comprometimento da renda</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+        <span style="font-size:22px;font-weight:700">${pctGasto.toFixed(0)}%</span>
+        <span style="font-size:13px;color:var(--muted)">gasto / recebido</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill ${pctGasto > 90 ? 'over' : pctGasto > 75 ? 'warn' : 'ok'}"
+             style="width:${pctGasto}%"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Saldo após vencimentos (30 dias)</div>
+      <div class="card-value ${saldoAposCor}">${fmt(d.saldoAposVenc)}</div>
+      <div class="card-sub">Desconta ${fmt(d.totalPendente)} em contas pendentes</div>
+    </div>
+
+    <div class="section-title">Top categorias de gasto</div>
+  `;
+
+  d.topCats.slice(0, 6).forEach(c => {
+    const pct = d.totalDesp > 0 ? (c.val / d.totalDesp * 100).toFixed(0) : 0;
+    html += `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <div style="flex:1">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:14px">${c.cat}</span>
+            <span style="font-size:13px;color:var(--muted)">${fmt(c.val)}</span>
+          </div>
+          <div class="bar-track">
+            <div class="bar-fill ok" style="width:${pct}%"></div>
+          </div>
+        </div>
+        <span style="font-size:12px;color:var(--muted);min-width:32px;text-align:right">${pct}%</span>
+      </div>`;
+  });
+
+  document.getElementById('visaoContent').innerHTML = html;
+}
+
+function renderPilares() {
+  const d = ESTADO.dados;
+  let html = `<div class="section-title">Modelo dos 6 pilares</div>
+    <div class="card" style="margin-bottom:20px;font-size:13px;color:var(--muted);line-height:1.6">
+      Compara seus gastos reais com as metas do modelo financeiro baseado na sua renda de <strong style="color:var(--text)">${fmt(d.receita)}</strong>.
+    </div>`;
+
+  Object.entries(PILARES_META).forEach(([pilar, pct]) => {
+    const meta = d.receita * pct;
+    const real = d.gastosPorPilar[pilar] || 0;
+    const ratio = meta > 0 ? Math.min(120, (real / meta) * 100) : 0;
+    const over  = real > meta;
+    const diff  = Math.abs(real - meta);
+    const status = over
+      ? `⚠️ ${fmt(diff)} acima da meta`
+      : `✅ ${fmt(diff)} dentro da meta`;
+    const cls = over ? 'over' : ratio > 80 ? 'warn' : 'ok';
+
+    html += `
+      <div class="pilar-item">
+        <div class="pilar-header">
+          <span class="pilar-name">${PILARES_ICONE[pilar]} ${pilar}</span>
+          <span class="pilar-vals">${fmt(real)} / ${fmt(meta)}</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill ${cls}" style="width:${Math.min(100,ratio)}%"></div>
+        </div>
+        <div class="pilar-status ${cls}">${status}</div>
+      </div>`;
+  });
+
+  document.getElementById('pilaresContent').innerHTML = html;
+}
+
+function renderVencimentos() {
+  const d = ESTADO.dados;
+  let html = '';
+
+  if (d.vencimentos && d.vencimentos.length > 0) {
+    html += `<div class="card" style="margin-bottom:0;padding:0 18px">`;
+    d.vencProximos.forEach(v => {
+      const dt = new Date(v.vencimento);
+      const hoje = new Date(); hoje.setHours(0,0,0,0);
+      const diff = Math.round((dt - hoje) / (1000*60*60*24));
+      const diffStr = diff === 0 ? 'Hoje!' : diff === 1 ? 'Amanhã' : `Em ${diff} dias`;
+      const statusCls = v.status === 'Pago' ? 'pago' : v.status === 'Atrasado' ? 'atrasado' : 'pendente';
+
+      html += `
+        <div class="venc-item">
+          <div class="venc-left">
+            <div class="venc-name">${v.nome}</div>
+            <div class="venc-date">${diffStr} · ${v.banco || ''}</div>
+          </div>
+          <div class="venc-right">
+            <div class="venc-val">${v.valor > 0 ? fmt(v.valor) : 'Variável'}</div>
+            <span class="venc-status ${statusCls}">${v.status}</span>
+          </div>
+        </div>`;
+    });
+    html += '</div>';
+  } else {
+    html = `<div class="empty"><div class="empty-icon">📅</div>
+      <div class="empty-text">Nenhum vencimento nos próximos 30 dias</div></div>`;
+  }
+
+  document.getElementById('vencimentosContent').innerHTML =
+    `<div class="section-title">Próximos 30 dias</div>` + html;
+}
+
+function renderInsights() {
+  const d = ESTADO.dados;
+  let html = `<div style="font-size:13px;color:var(--muted);margin-bottom:16px">
+    Gerados automaticamente às 03:00 pela IA com base nos seus dados.</div>`;
+
+  if (!d.insights || d.insights.length === 0) {
+    html += `<div class="empty"><div class="empty-icon">🤖</div>
+      <div class="empty-text">Ainda não há insights gerados.<br>Eles aparecem após a primeira análise noturna.</div></div>`;
+  } else {
+    const prioClasse = p => {
+      if (p === 'Alta') return 'alta';
+      if (p === 'Média') return 'media';
+      if (p === 'Info' || p === 'Baixa') return 'info';
+      return 'info';
+    };
+
+    d.insights.forEach(ins => {
+      const cls = ins.tipo === 'Investimento' ? 'invest' : prioClasse(ins.prioridade);
+      html += `
+        <div class="insight-card ${cls}">
+          <span class="insight-badge ${cls}">${ins.tipo || 'Análise'}</span>
+          <div class="insight-title">${ins.titulo || ''}</div>
+          <div class="insight-text">${ins.analise || ''}</div>
+          ${ins.acao ? `<div class="insight-action">→ ${ins.acao}</div>` : ''}
+        </div>`;
+    });
+  }
+
+  document.getElementById('insightsContent').innerHTML = html;
+}
+
+function renderMetas() {
+  const d = ESTADO.dados;
+  let html = '';
+
+  if (!d.metas || d.metas.length === 0) {
+    html = `<div class="empty"><div class="empty-icon">🎯</div>
+      <div class="empty-text">Nenhuma meta cadastrada.<br>Adicione metas na aba Metas do Google Sheets.</div></div>`;
+  } else {
+    d.metas.forEach(m => {
+      const pct = m.total > 0 ? Math.min(100, (m.guardado / m.total) * 100) : 0;
+      const mesesRestantes = m.aporte > 0 ? Math.ceil((m.total - m.guardado) / m.aporte) : '?';
+
+      html += `
+        <div class="card meta-item">
+          <div class="meta-header">
+            <div class="meta-name">${m.nome}</div>
+            <div class="meta-pct">${pct.toFixed(0)}%</div>
+          </div>
+          <div class="meta-vals">
+            ${fmt(m.guardado)} de ${fmt(m.total)} · Aporte: ${fmt(m.aporte)}/mês
+          </div>
+          <div class="meta-track">
+            <div class="meta-fill ${pct < 30 ? 'warn' : ''}" style="width:${pct}%"></div>
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin-top:8px">
+            Prazo: ${m.prazo} · ~${mesesRestantes} meses restantes
+          </div>
+        </div>`;
+    });
+  }
+
+  document.getElementById('metasContent').innerHTML =
+    `<div class="section-title">Metas em andamento</div>` + html;
+}
+
+// ── CHAT IA ──────────────────────────────────────────────────
+async function enviarMsg() {
+  const input = document.getElementById('chatInput');
+  const pergunta = input.value.trim();
+  if (!pergunta) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+  adicionarMsg('user', pergunta);
+
+  // Typing indicator
+  const typingId = 'typing-' + Date.now();
+  adicionarMsg('ai', `<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>`, typingId);
+
+  try {
+    const resp = await fetch(CFG.scriptUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pergunta, sheetId: CFG.sheetId }),
+    });
+
+    const dados = await resp.json();
+    document.getElementById(typingId)?.remove();
+    adicionarMsg('ai', dados.resposta || 'Não obtive resposta.');
+  } catch (e) {
+    document.getElementById(typingId)?.remove();
+    adicionarMsg('ai', '⚠️ Não foi possível conectar ao servidor. Verifique a URL do Apps Script.');
+  }
+}
+
+function adicionarMsg(tipo, texto, id) {
+  const chat = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg ' + tipo;
+  if (id) div.id = id;
+
+  const avatar = document.createElement('div');
+  avatar.className = 'msg-avatar';
+  avatar.textContent = tipo === 'user' ? '👤' : '🤖';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble';
+  bubble.innerHTML = texto;
+
+  div.appendChild(avatar);
+  div.appendChild(bubble);
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+</script>
+</body>
+</html>
