@@ -558,6 +558,7 @@ tbody tr:hover td{background:var(--ci)}
         </div>
         <button class="ad-btn" onclick="abrirModal()">+ Lançamento</button>
         <button class="ic-btn" onclick="toggleTema()" id="topTh">☀️</button>
+        <span id="lastUpdate" style="font-size:11px;color:var(--t3);white-space:nowrap;display:none">atualizado às <strong id="lastUpdateTime"></strong></span>
       </div>
     </header>
 
@@ -1151,6 +1152,15 @@ async function carregarDados(){
     renderAll();
     atualizarBadges();
     verificarPopupSalario();
+    // Registrar última atualização
+    const agora=new Date();
+    const el=document.getElementById('lastUpdate');
+    const tel=document.getElementById('lastUpdateTime');
+    if(el&&tel){
+      tel.textContent=agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      el.style.display='';
+      el.title='Dados carregados em '+agora.toLocaleString('pt-BR');
+    }
   }catch(e){
     console.error('Erro ao processar dados:',e);
     document.getElementById('sec-visao').innerHTML=`<div class="empty">⚠️ Erro ao processar dados.<br><small>${e.message}</small></div>`;
@@ -1644,6 +1654,22 @@ function rVisaoGeral(){
       {label:'Saldo',data:d.hist.map(h=>h.saldo),borderColor:gc('ac'),backgroundColor:gc('ac')+'18',fill:true,tension:.4,pointBackgroundColor:gc('ac'),pointRadius:4,borderWidth:2},
     ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`Saldo: ${fmt(c.raw)}`}}},scales:{x:{ticks:{color:gc('t2'),font:{size:11}},grid:{color:gc('b')}},y:{ticks:{color:gc('t2'),font:{size:11},callback:v=>'R$'+v.toLocaleString('pt-BR')},grid:{color:gc('b')}}}}});
   }
+}
+
+function getPillsPilares(d){
+  const ref=d.rendaPerfil||d.rec||1;
+  const pills=[];
+  Object.entries(PM).forEach(([p,pct])=>{
+    const meta=ref*pct,real=d.gpp[p]||0,ratio=real/Math.max(meta,1)*100;
+    if(ratio>110) pills.push({cls:'re',icon:'⚠️',txt:`${p}: ${ratio.toFixed(0)}% da meta`});
+    else if(ratio>85) pills.push({cls:'am',icon:'⚡',txt:`${p} próximo do limite`});
+  });
+  const melhor=Object.entries(PM).reduce((best,[p])=>{
+    const meta=ref*PM[p],real=d.gpp[p]||0,diff=meta-real;
+    return diff>best.diff?{p,diff}:best;
+  },{p:'',diff:-Infinity});
+  if(melhor.p&&melhor.diff>0) pills.push({cls:'gr',icon:'✅',txt:`${melhor.p} dentro da meta`});
+  return pills.slice(0,5);
 }
 
 function rPilares(){
