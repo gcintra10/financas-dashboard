@@ -1488,6 +1488,7 @@ function rVisao(){
   const ctxL=document.getElementById('cL')?.getContext('2d');
   if(ctxL&&d.hist.length>0){
     const saldos=d.hist.map(h=>h.saldo);
+    const maxVal=Math.max(...d.hist.map(h=>Math.max(h.receita,h.despesa)))*1.15;
     charts['cL']=new Chart(ctxL,{
       type:'bar',
       data:{
@@ -1496,22 +1497,28 @@ function rVisao(){
           {
             label:'Receita',
             data:d.hist.map(h=>h.receita),
-            backgroundColor:gc('gr')+'55',
+            backgroundColor:gc('gr')+'40',
             borderColor:gc('gr'),
             borderWidth:1.5,
-            borderRadius:6,
+            borderRadius:{topLeft:6,topRight:6,bottomLeft:0,bottomRight:0},
             borderSkipped:false,
+            barPercentage:.5,
+            categoryPercentage:.8,
             order:2,
+            datalabels:{display:false},
           },
           {
             label:'Despesa',
             data:d.hist.map(h=>h.despesa),
-            backgroundColor:gc('re')+'55',
+            backgroundColor:gc('re')+'40',
             borderColor:gc('re'),
             borderWidth:1.5,
-            borderRadius:6,
+            borderRadius:{topLeft:6,topRight:6,bottomLeft:0,bottomRight:0},
             borderSkipped:false,
+            barPercentage:.5,
+            categoryPercentage:.8,
             order:2,
+            datalabels:{display:false},
           },
           {
             label:'Saldo',
@@ -1519,19 +1526,21 @@ function rVisao(){
             type:'line',
             borderColor:gc('ac'),
             backgroundColor:'transparent',
-            tension:.4,
+            tension:.35,
             pointBackgroundColor:saldos.map(s=>s>=0?gc('ac'):gc('re')),
+            pointBorderColor:'#fff',
+            pointBorderWidth:2,
             pointRadius:5,
             pointHoverRadius:7,
             borderWidth:2.5,
             order:1,
             datalabels:{
               display:true,
-              anchor:'end',
+              anchor:(ctx)=>saldos[ctx.dataIndex]>=0?'end':'start',
               align:(ctx)=>saldos[ctx.dataIndex]>=0?'top':'bottom',
               color:(ctx)=>saldos[ctx.dataIndex]>=0?gc('ac'):gc('re'),
               font:{size:10,weight:'700',family:'Plus Jakarta Sans'},
-              formatter:(v)=>(v>=0?'+':'')+fmt(v).replace('R$ ','R$'),
+              formatter:(v)=>'R$'+(Math.abs(v)/1000).toFixed(1)+'k',
             }
           },
         ]
@@ -1542,13 +1551,19 @@ function rVisao(){
         plugins:{
           legend:{labels:{color:gc('t2'),font:{size:11,family:'Plus Jakarta Sans'},boxWidth:8,padding:10}},
           tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${fmt(ctx.raw)}`}},
-          datalabels:{display:false}, // padrão off, só o saldo tem
+          datalabels:{display:false},
         },
         scales:{
-          x:{ticks:{color:gc('t2'),font:{size:11}},grid:{display:false}},
-          y:{ticks:{color:gc('t2'),font:{size:11},callback:v=>'R$'+Math.abs(v/1000).toFixed(0)+'k'},grid:{color:gc('b')}}
+          x:{ticks:{color:gc('t2'),font:{size:11}},grid:{display:false},border:{display:false}},
+          y:{
+            min:0,
+            max:maxVal,
+            ticks:{color:gc('t2'),font:{size:11},callback:v=>'R$'+(v/1000).toFixed(0)+'k',maxTicksLimit:5},
+            grid:{color:gc('b')},
+            border:{display:false}
+          }
         },
-        layout:{padding:{top:20}}
+        layout:{padding:{top:24,right:8}}
       }
     });
   }
@@ -1576,6 +1591,13 @@ function rVisaoGeral(){
   const saldoAcum=d.hist.reduce((s,h)=>s+h.saldo,0);
 
   document.getElementById('sec-visao').innerHTML=`
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+    <div class="view-toggle">
+      <button class="vt-btn" id="vtMes" onclick="setView('mes')">📅 Este mês</button>
+      <button class="vt-btn active" id="vtGeral" onclick="setView('geral')">🌐 Visão geral</button>
+    </div>
+    <div style="font-size:12px;color:var(--t3);font-weight:500">Patrimônio e saúde financeira</div>
+  </div>
   ${pills.length>0?`<div class="ip-row">${pills.map(p=>`<span class="ip ${p.cls}"><span class="ip-icon">${p.icon}</span>${p.txt}</span>`).join('')}</div>`:''}
 
   <div class="summary-card">
