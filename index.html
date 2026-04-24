@@ -823,7 +823,33 @@ function fecharMob(){document.getElementById('sb').classList.remove('mo');docume
 // ══ SETUP ════════════════════════════════════════════════════
 function abrirSetup(){document.getElementById('iSh').value=CFG.sheetId||'';document.getElementById('iSc').value=CFG.scriptUrl||'';document.getElementById('iSe').value=CFG.secret||'';document.getElementById('iNm').value=CFG.userName||'';document.getElementById('setupOv').classList.remove('hidden');}
 function fecharSetup(){if(CFG.sheetId&&CFG.scriptUrl)document.getElementById('setupOv').classList.add('hidden');}
-function salvarCfg(){CFG.sheetId=document.getElementById('iSh').value.trim();CFG.scriptUrl=document.getElementById('iSc').value.trim();CFG.secret=document.getElementById('iSe').value.trim();CFG.userName=document.getElementById('iNm').value.trim()||'Você';if(!CFG.sheetId||!CFG.scriptUrl){alert('Preencha ID e URL.');return;}['sheetId','scriptUrl','secret','userName'].forEach(k=>lss('fin_'+k,CFG[k]));atualizarUser();document.getElementById('setupOv').classList.add('hidden');const obDone=ls('fin_ob_done');if(!obDone){abrirOnboarding();}else{carregarDados();}}
+async function salvarCfg(){
+  CFG.sheetId=document.getElementById('iSh').value.trim();
+  CFG.scriptUrl=document.getElementById('iSc').value.trim();
+  CFG.secret=document.getElementById('iSe').value.trim();
+  CFG.userName=document.getElementById('iNm').value.trim()||'Você';
+  if(!CFG.sheetId||!CFG.scriptUrl){alert('Preencha ID e URL.');return;}
+  ['sheetId','scriptUrl','secret','userName'].forEach(k=>lss('fin_'+k,CFG[k]));
+  atualizarUser();
+  document.getElementById('setupOv').classList.add('hidden');
+  // Verificar se já existe perfil salvo no Sheets (para outros dispositivos)
+  const obDone=ls('fin_ob_done');
+  if(!obDone){
+    // Tentar carregar perfil do Sheets antes de pedir onboarding
+    try{
+      const perfilAba=await buscarAba('Config');
+      if(perfilAba&&perfilAba.length>1){
+        // Sheets já tem dados — pular onboarding
+        lss('fin_ob_done','1');
+        carregarDados();
+        return;
+      }
+    }catch(e){console.warn('Sem Config no Sheets:',e);}
+    abrirOnboarding();
+  } else {
+    carregarDados();
+  }
+}
 
 // ══ ONBOARDING ════════════════════════════════════════════════
 const OB_STEPS=[
@@ -2214,10 +2240,13 @@ function impDeveIgnorar(titulo, valor){
 // Detectar banco pelo nome do arquivo
 function impDetectarBanco(nomeArquivo){
   const n=nomeArquivo.toLowerCase();
-  if(n.includes('[pf]')||n.includes('_pf_')) return{banco:'Nubank PF',meio:'Crédito Nubank PF',tipo:'nubank',fech:28};
-  if(n.includes('[pj]')||n.includes('_pj_')) return{banco:'Nubank PJ',meio:'Crédito Nubank PJ',tipo:'nubank',fech:28};
-  if(n.includes('itau')||n.includes('itaú')) return{banco:'Itaú',meio:'Débito',tipo:'itau',fech:0};
-  return{banco:'Desconhecido',meio:'Débito',tipo:'nubank',fech:28};
+  // Detectar por padrões no nome do arquivo
+  if(n.includes('[pf]')||n.includes('_pf_')||n.includes('-pf-')) return{banco:'Nubank PF',meio:'Crédito Nubank PF',tipo:'nubank',fech:28,detectado:true};
+  if(n.includes('[pj]')||n.includes('_pj_')||n.includes('-pj-')) return{banco:'Nubank PJ',meio:'Crédito Nubank PJ',tipo:'nubank',fech:28,detectado:true};
+  if(n.includes('itau')||n.includes('itaú')) return{banco:'Itaú',meio:'Débito',tipo:'itau',fech:0,detectado:true};
+  if(n.includes('nubank')||n.includes('nu_')) return{banco:'Nubank',meio:'Crédito Nubank PF',tipo:'nubank',fech:28,detectado:false};
+  // Tentar detectar pelo conteúdo (será tentado depois)
+  return{banco:'',meio:'',tipo:'desconhecido',fech:28,detectado:false};
 }
 
 // Parse CSV Nubank
@@ -2255,26 +2284,109 @@ let _impExistentes=[];
 function impDrag(e,over){e.preventDefault();document.getElementById('impZone').classList.toggle('drag',over);}
 function impDrop(e){e.preventDefault();document.getElementById('impZone').classList.remove('drag');impFileSelecionado(e.dataTransfer.files);}
 
+let _pendentesSelecao=[];
+
 async function impFileSelecionado(files){
   if(!files||!files.length) return;
-  impShowProgress(true,'Lendo arquivo...',10);
   _impDados=[];
-  
+  _pendentesSelecao=[];
+
+  // Verificar se algum arquivo precisa de seleção manual
+  const precisaSelecao=[];
+  const processa=[];
   for(let i=0;i<files.length;i++){
     const file=files[i];
     const bancoCfg=impDetectarBanco(file.name);
-    impShowProgress(true,`Processando ${file.name}...`,20+i*20);
-    
+    if(!bancoCfg.detectado){
+      precisaSelecao.push({file,bancoCfg});
+    } else {
+      processa.push({file,bancoCfg});
+    }
+  }
+
+  if(precisaSelecao.length>0){
+    // Mostrar modal de seleção para os não detectados
+    _pendentesSelecao=[...processa];
+    impAbrirSelecaoBanco(precisaSelecao);
+    return;
+  }
+
+  await impProcessarArquivos(processa);
+}
+
+function impAbrirSelecaoBanco(lista){
+  const modal=document.getElementById('impBancoModal');
+  if(!modal){
+    // Criar modal inline
+    const div=document.createElement('div');
+    div.id='impBancoModal';
+    div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(8px);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px';
+    div.innerHTML=`<div style="background:var(--card);border:1px solid var(--b2);border-radius:20px;padding:28px;max-width:400px;width:100%;box-shadow:var(--shm)">
+      <div style="font-size:16px;font-weight:700;margin-bottom:6px">🏦 Identificar banco</div>
+      <div style="font-size:13px;color:var(--t2);margin-bottom:20px">Não consegui identificar o banco pelos nomes abaixo. Selecione para cada um:</div>
+      <div id="impBancoLista"></div>
+      <div style="display:flex;gap:8px;margin-top:20px">
+        <button onclick="document.getElementById('impBancoModal').remove()" style="flex:1;padding:10px;background:var(--ci);border:1px solid var(--b);border-radius:var(--rs);color:var(--t2);font-size:13px;cursor:pointer">Cancelar</button>
+        <button onclick="impConfirmarSelecaoBanco()" style="flex:1;padding:10px;background:var(--ac);color:#fff;border:none;border-radius:var(--rs);font-size:14px;font-weight:700;cursor:pointer">Confirmar →</button>
+      </div>
+    </div>`;
+    document.body.appendChild(div);
+  }
+  const lista2=document.getElementById('impBancoLista');
+  if(lista2) lista2.innerHTML=lista.map((item,i)=>`
+    <div style="margin-bottom:14px">
+      <div style="font-size:12px;color:var(--t3);margin-bottom:5px;font-weight:600">📄 ${item.file.name}</div>
+      <select id="bancoSel_${i}" style="width:100%;padding:9px 12px;background:var(--ci);border:1.5px solid var(--b);border-radius:var(--rs);color:var(--t);font-size:14px;outline:none;font-family:var(--font)">
+        <option value="">Selecione o banco...</option>
+        <option value="pf">Nubank PF (conta pessoa física)</option>
+        <option value="pj">Nubank PJ (conta pessoa jurídica)</option>
+        <option value="itau">Itaú (débito)</option>
+        <option value="outro">Outro (genérico)</option>
+      </select>
+    </div>
+  `).join('');
+  // Guardar a lista de arquivos pendentes
+  window._impPendentes=lista;
+}
+
+async function impConfirmarSelecaoBanco(){
+  const lista=window._impPendentes||[];
+  const confirmados=[];
+  for(let i=0;i<lista.length;i++){
+    const sel=document.getElementById('bancoSel_'+i)?.value;
+    if(!sel){alert('Selecione o banco para todos os arquivos.');return;}
+    const bancos={
+      pf:{banco:'Nubank PF',meio:'Crédito Nubank PF',tipo:'nubank',fech:28,detectado:true},
+      pj:{banco:'Nubank PJ',meio:'Crédito Nubank PJ',tipo:'nubank',fech:28,detectado:true},
+      itau:{banco:'Itaú',meio:'Débito',tipo:'itau',fech:0,detectado:true},
+      outro:{banco:'Outro',meio:'Débito',tipo:'nubank',fech:28,detectado:true},
+    };
+    confirmados.push({file:lista[i].file,bancoCfg:bancos[sel]});
+  }
+  document.getElementById('impBancoModal')?.remove();
+  await impProcessarArquivos([..._pendentesSelecao,...confirmados]);
+}
+
+async function impProcessarArquivos(lista){
+  impShowProgress(true,'Lendo arquivos...',10);
+  _impDados=[];
+
+  for(let i=0;i<lista.length;i++){
+    const {file,bancoCfg}=lista[i];
+    impShowProgress(true,`Processando ${file.name}...`,10+((i+1)/lista.length*60));
     const text=await file.text();
     let rows=[];
     if(bancoCfg.tipo==='nubank') rows=impParseNubank(text,bancoCfg);
-    else rows=[]; // Itaú CSV futuro
     _impDados.push(...rows);
   }
 
-  impShowProgress(true,'Verificando duplicatas...',80);
-  
-  // Buscar transações existentes do Sheets para deduplicar
+  if(_impDados.length===0){
+    impShowProgress(false,'',0);
+    alert('Nenhuma transação encontrada. Verifique se o arquivo é um CSV do Nubank.');
+    return;
+  }
+
+  impShowProgress(true,'Verificando duplicatas no Sheets...',75);
   await impVerificarDuplicatas();
   impShowProgress(false,'',100);
   impMostrarPreview();
@@ -2364,7 +2476,11 @@ async function impConfirmar(){
   impShowProgress(true,'Enviando para o Sheets...',50);
 
   try{
-    // Enviar em lotes de 50 para não estourar o Apps Script
+    // Verificar config antes de enviar
+    if(!CFG.scriptUrl){throw new Error('URL do Apps Script não configurada. Vá em Configurações.');}
+    if(!CFG.sheetId){throw new Error('ID da planilha não configurado. Vá em Configurações.');}
+    
+    // Enviar em lotes de 50
     const lotes=[];
     for(let i=0;i<paraImportar.length;i+=50) lotes.push(paraImportar.slice(i,i+50));
     
@@ -2377,7 +2493,8 @@ async function impConfirmar(){
         transacoes:lote,
         substituir:_impDupAction==='replace',
       };
-      await chamarScript('importarTransacoes',payload);
+      const resp=await chamarScript('importarTransacoes',payload);
+      if(resp&&resp.erro) throw new Error(resp.erro);
       enviados+=lote.length;
       impShowProgress(true,`Enviando... ${enviados}/${paraImportar.length}`,50+enviados/paraImportar.length*50);
     }
@@ -2387,7 +2504,7 @@ async function impConfirmar(){
     const res=document.getElementById('impResult');
     res.style.display='block';
     res.className='imp-result';
-    res.innerHTML=`<div style="font-size:24px;margin-bottom:8px">✅</div><div style="font-size:15px;font-weight:700">${paraImportar.length} transações importadas!</div><div style="font-size:13px;color:var(--gr);margin-top:4px">Dados atualizados no Sheets</div><button onclick="impReset();limparCache();carregarDados();" style="margin-top:12px;padding:9px 20px;background:var(--ac);color:#fff;border:none;border-radius:var(--rs);font-size:13px;font-weight:700;cursor:pointer">Ver no dashboard →</button>`;
+    res.innerHTML=`<div style="font-size:24px;margin-bottom:8px">✅</div><div style="font-size:15px;font-weight:700">${paraImportar.length} transações importadas!</div><div style="font-size:13px;color:var(--gr);margin-top:4px">Dados atualizados no Sheets</div><button onclick="impReset();limparCache();carregarDados();nav('visao',document.querySelector('[data-tip=\'Visão Geral\']'));" style="margin-top:12px;padding:9px 20px;background:var(--ac);color:#fff;border:none;border-radius:var(--rs);font-size:13px;font-weight:700;cursor:pointer">Ver no dashboard →</button>`;
   }catch(e){
     impShowProgress(false,'',0);
     const res=document.getElementById('impResult');
