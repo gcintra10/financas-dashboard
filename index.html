@@ -412,9 +412,8 @@ tbody tr:hover td{background:var(--ci)}
 
 /* ══ SIDEBAR TOOLTIP ════════════════════════════════════ */
 .ni{position:relative}
-.ni-tip{position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%);background:var(--card);border:1px solid var(--b2);border-radius:var(--rx);padding:5px 10px;font-size:12px;font-weight:600;color:var(--t);white-space:nowrap;box-shadow:var(--shm);opacity:0;pointer-events:none;transition:opacity .15s;z-index:200}
-.sidebar.collapsed .ni:hover .ni-tip{opacity:1}
-.sidebar:not(.collapsed) .ni-tip{display:none}
+.ni-tip{position:fixed;background:var(--card);border:1px solid var(--b2);border-radius:var(--rx);padding:6px 12px;font-size:12px;font-weight:600;color:var(--t);white-space:nowrap;box-shadow:var(--shm);pointer-events:none;z-index:9999;display:none}
+.ni-tip.vis{display:block}
 
 /* ══ INSIGHT PILLS ═══════════════════════════════════════ */
 .ip-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
@@ -523,15 +522,15 @@ tbody tr:hover td{background:var(--ci)}
     </div>
     <nav class="sb-nav">
       <div class="ngl">Principal</div>
-      <button class="ni active" onclick="nav('visao',this)"><span class="ni-tip">Visão Geral</span><span class="ni-ic">📊</span><span class="nl">Visão Geral</span></button>
-      <button class="ni" onclick="nav('pilares',this)"><span class="ni-tip">Pilares</span><span class="ni-ic">⚖️</span><span class="nl">Pilares</span></button>
+      <button class="ni" data-tip="Visão Geral" active" onclick="nav('visao',this)"><span class="ni-ic">📊</span><span class="nl">Visão Geral</span></button>
+      <button class="ni" data-tip="Pilares"" onclick="nav('pilares',this)"><span class="ni-ic">⚖️</span><span class="nl">Pilares</span></button>
       <div class="ngl">Gestão</div>
-      <button class="ni" onclick="nav('venc',this)"><span class="ni-tip">Vencimentos</span><span class="ni-ic">📅</span><span class="nl">Vencimentos</span><span class="nb" id="bv" style="display:none">0</span></button>
-      <button class="ni" onclick="nav('metas',this)"><span class="ni-tip">Metas</span><span class="ni-ic">🎯</span><span class="nl">Metas</span></button>
-      <button class="ni" onclick="nav('estab',this)"><span class="ni-tip">Estabelecimentos</span><span class="ni-ic">🏪</span><span class="nl">Estabelec.</span><span class="nb" id="be" style="display:none">!</span></button>
+      <button class="ni" data-tip="Vencimentos"" onclick="nav('venc',this)"><span class="ni-ic">📅</span><span class="nl">Vencimentos</span><span class="nb" id="bv" style="display:none">0</span></button>
+      <button class="ni" data-tip="Metas"" onclick="nav('metas',this)"><span class="ni-ic">🎯</span><span class="nl">Metas</span></button>
+      <button class="ni" data-tip="Estabelecimentos"" onclick="nav('estab',this)"><span class="ni-ic">🏪</span><span class="nl">Estabelec.</span><span class="nb" id="be" style="display:none">!</span></button>
       <div class="ngl">Inteligência</div>
-      <button class="ni" onclick="nav('ins',this)"><span class="ni-tip">Insights IA</span><span class="ni-ic">🤖</span><span class="nl">Insights IA</span></button>
-      <button class="ni" onclick="nav('chat',this)"><span class="ni-tip">Chat IA</span><span class="ni-ic">💬</span><span class="nl">Chat IA</span></button>
+      <button class="ni" data-tip="Insights IA"" onclick="nav('ins',this)"><span class="ni-ic">🤖</span><span class="nl">Insights IA</span></button>
+      <button class="ni" data-tip="Chat IA"" onclick="nav('chat',this)"><span class="ni-ic">💬</span><span class="nl">Chat IA</span></button>
     </nav>
     <div class="sb-ft">
       <button class="th-btn" onclick="toggleTema()"><span class="th-ic" id="thIc">☀️</span><span class="nl" id="thLb">Modo claro</span></button>
@@ -651,6 +650,9 @@ tbody tr:hover td{background:var(--ci)}
 </div>
 
 <script>
+// Registrar plugin datalabels globalmente
+if(typeof ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels);
+
 // ══ CONSTANTES ═══════════════════════════════════════════════
 const VRS='5.0';
 const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -969,6 +971,9 @@ function obStep4Metas(){
         <div class="ob-field"><label class="ob-label">Prazo desejado</label>
           <input class="ob-input" type="text" placeholder="Ex: 12 meses, Dez/2026" value="${m.prazo||''}" oninput="OB.metas[${i}].prazo=this.value"/>
         </div>
+        <div class="ob-field"><label class="ob-label">Data de início</label>
+          <input class="ob-input" type="date" value="${m.dataInicio||new Date().toISOString().split('T')[0]}" oninput="OB.metas[${i}].dataInicio=this.value"/>
+        </div>
         <div class="ob-field"><label class="ob-label">Onde guardar</label>
           <select class="ob-select" onchange="OB.metas[${i}].onde=this.value">
             <option value="Tesouro Selic" ${m.onde==='Tesouro Selic'?'selected':''}>Tesouro Selic</option>
@@ -987,7 +992,12 @@ function obStep4Metas(){
   html+=`<button class="ob-add-btn" onclick="addMeta()">+ Adicionar meta financeira</button>`;
   return html;
 }
-function addMeta(){if(!OB.metas)OB.metas=[];OB.metas.push({nome:'',total:0,guardado:0,aporte:0,prazo:'',prioridade:'Média',onde:'Tesouro Selic'});obRender();}
+function addMeta(){
+  if(!OB.metas)OB.metas=[];
+  const hoje=new Date().toISOString().split('T')[0];
+  OB.metas.push({nome:'',total:0,guardado:0,aporte:0,prazo:'',prioridade:'Média',onde:'Tesouro Selic',dataInicio:hoje});
+  obRender();
+}
 function remMeta(i){OB.metas.splice(i,1);obRender();}
 
 function obNext(){
@@ -1351,14 +1361,18 @@ function rVisao(){
   ${pills.length>0?`<div class="ip-row">${pills.map(p=>`<span class="ip ${p.cls}"><span class="ip-icon">${p.icon}</span>${p.txt}</span>`).join('')}</div>`:''}
   <div class="kpi-row">
     <div class="kpi k-gr">
-      <div class="kpi-top"><div class="kpi-ic gr">💰</div><span class="kpi-badge nu">+${d.rec>0?'recebido':'aguardando'}</span></div>
+      <div class="kpi-top"><div class="kpi-ic gr">💰</div><span class="kpi-badge ${d.rec>0?'dn':'nu'}">${d.rec>0?'✓ recebido':'aguardando'}</span></div>
       <div class="kpi-val gr">${fmt(d.rec)}</div>
-      <div class="kpi-lbl">Receita do mês</div>
+      <div class="kpi-lbl">Receita — ${MESES[ST.mesIdx]}</div>
       <div class="kpi-detail">
-        <div class="kpi-detail-row"><span>Renda base</span><span class="kpi-detail-val" style="color:var(--gr)">${fmt(d.rendaPerfil)}</span></div>
-        ${d.rec!==d.rendaPerfil?`<div class="kpi-detail-row"><span>Variação</span><span class="kpi-detail-val">${fmt(d.rec-d.rendaPerfil)}</span></div>`:''}
+        <div class="kpi-detail-row"><span>Renda base perfil</span><span class="kpi-detail-val" style="color:var(--gr)">${fmt(d.rendaPerfil)}</span></div>
+        ${d.rec!==d.rendaPerfil&&d.rec>0?`<div class="kpi-detail-row"><span>Variação</span><span class="kpi-detail-val" style="color:${d.rec>d.rendaPerfil?'var(--gr)':'var(--am)'}">${d.rec>d.rendaPerfil?'+':''}${fmt(d.rec-d.rendaPerfil)}</span></div>`:''}
+        <div class="kpi-detail-row" style="border-top:1px solid var(--b);margin-top:4px;padding-top:4px">
+          <span>Saldo acum. 6m</span>
+          <span class="kpi-detail-val" style="color:${d.hist.reduce((s,h)=>s+h.saldo,0)>=0?'var(--gr)':'var(--re)'}">${fmt(d.hist.reduce((s,h)=>s+h.saldo,0))}</span>
+        </div>
       </div>
-      <div class="kpi-mini-bar"><div class="kpi-mini-fill gr" style="width:100%"></div></div>
+      <div class="kpi-mini-bar"><div class="kpi-mini-fill gr" style="width:${Math.min(100,d.rec/Math.max(d.rendaPerfil,1)*100)}%"></div></div>
     </div>
     <div class="kpi k-re">
       <div class="kpi-top"><div class="kpi-ic re">💸</div><span class="kpi-badge ${pct>80?'up':'nu'}">${pct.toFixed(0)}% renda</span></div>
@@ -1676,10 +1690,61 @@ function rIns(){
 
 function rMetas(){
   const d=ST.dados;
-  let html='';
-  if(!d.mArr||d.mArr.length===0){html=`<div class="empty">🎯<br>Nenhuma meta cadastrada no Sheets.</div>`;}
-  else d.mArr.forEach(m=>{const pct=m.total>0?Math.min(100,(m.guardado/m.total)*100):0;const meses=m.aporte>0?Math.ceil((m.total-m.guardado)/m.aporte):'?';html+=`<div class="me-c"><div class="me-tp"><div><div class="me-nm">${m.nome}</div><div class="me-ds">${m.desc||''}</div></div><div class="me-pb">${pct.toFixed(0)}%</div></div><div class="me-bw"><div class="me-bf ${pct<30?'w':''}" style="width:${pct}%"></div></div><div class="me-st"><div class="me-si"><div class="me-sv">${fmt(m.guardado)}</div><div class="me-sl">Guardado</div></div><div class="me-si"><div class="me-sv">${fmt(m.total)}</div><div class="me-sl">Total</div></div><div class="me-si"><div class="me-sv">${fmt(m.aporte)}/mês</div><div class="me-sl">Aporte</div></div><div class="me-si"><div class="me-sv">~${meses} meses</div><div class="me-sl">Restantes · ${m.prazo}</div></div></div></div>`;});
+  // Metas do onboarding (têm data inicial)
+  const metasOB=JSON.parse(ls('fin_metas_ob')||'[]');
+
+  // Botão adicionar sempre visível
+  let html=`<div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+    <button onclick="adicionarMetaRapida()" style="display:flex;align-items:center;gap:7px;padding:9px 16px;border-radius:var(--rs);background:var(--ac);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(79,70,229,.3)">
+      + Nova meta
+    </button>
+  </div>`;
+
+  if(!d.mArr||d.mArr.length===0){
+    html+=`<div class="empty">🎯<br>Nenhuma meta cadastrada.<br><small style="color:var(--t3)">Clique em "+ Nova meta" ou adicione no Perfil</small></div>`;
+  } else {
+    d.mArr.forEach(m=>{
+      const pct=m.total>0?Math.min(100,(m.guardado/m.total)*100):0;
+      const meses=m.aporte>0?Math.ceil(Math.max(0,m.total-m.guardado)/m.aporte):'?';
+      // Buscar data inicial no onboarding (se existir)
+      const obMeta=metasOB.find(ob=>ob.nome===m.nome);
+      const dataInicio=obMeta?.dataInicio||m.prazo||'';
+      // Calcular data estimada de conclusão
+      let dataConclusao='';
+      if(obMeta?.dataInicio&&m.aporte>0&&typeof meses==='number'){
+        const ini=new Date(obMeta.dataInicio);
+        ini.setMonth(ini.getMonth()+meses);
+        dataConclusao=`Conclusão est.: ${MESES_C[ini.getMonth()]}/${ini.getFullYear()}`;
+      }
+      const diasDesde=obMeta?.dataInicio?Math.floor((new Date()-new Date(obMeta.dataInicio))/864e5):-1;
+      html+=`<div class="me-c">
+        <div class="me-tp">
+          <div>
+            <div class="me-nm">${m.nome}</div>
+            <div class="me-ds">${m.desc||''}</div>
+            ${diasDesde>=0?`<div style="font-size:11px;color:var(--t3);margin-top:3px">📅 Iniciada em ${new Date(obMeta.dataInicio).toLocaleDateString('pt-BR')} · há ${diasDesde} dias</div>`:''}
+          </div>
+          <div class="me-pb">${pct.toFixed(0)}%</div>
+        </div>
+        <div class="me-bw"><div class="me-bf ${pct<30?'w':''}" style="width:${pct}%"></div></div>
+        <div class="me-st">
+          <div class="me-si"><div class="me-sv">${fmt(m.guardado)}</div><div class="me-sl">Guardado</div></div>
+          <div class="me-si"><div class="me-sv">${fmt(m.total)}</div><div class="me-sl">Total</div></div>
+          <div class="me-si"><div class="me-sv">${fmt(m.aporte)}/mês</div><div class="me-sl">Aporte</div></div>
+          <div class="me-si"><div class="me-sv">~${meses} meses</div><div class="me-sl">${dataConclusao||('Prazo: '+m.prazo)}</div></div>
+        </div>
+      </div>`;
+    });
+  }
   document.getElementById('sec-metas').innerHTML=html;
+}
+
+function adicionarMetaRapida(){
+  // Abre o onboarding direto na etapa de metas
+  OB.step=4;
+  try{OB.metas=JSON.parse(ls('fin_metas_ob')||'[]');}catch{OB.metas=[];}
+  document.getElementById('obOv').classList.remove('hidden');
+  obRender();
 }
 
 function rEstab(){
@@ -1918,6 +1983,29 @@ async function enviarMsg(){
 }
 function addMsg(tipo,texto,id){const c=document.getElementById('chMs');const div=document.createElement('div');div.className='msg '+tipo;if(id)div.id=id;const av=document.createElement('div');av.className='msg-av';av.textContent=tipo==='u'?'👤':'🤖';const b=document.createElement('div');b.className='msg-b';b.innerHTML=texto;div.appendChild(av);div.appendChild(b);c.appendChild(div);c.scrollTop=c.scrollHeight;}
 function autoR(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
+
+// ── SIDEBAR TOOLTIP VIA JS ──────────────────────────────────
+(function(){
+  let tipEl=null;
+  function getTip(){if(!tipEl){tipEl=document.createElement('div');tipEl.className='ni-tip';document.body.appendChild(tipEl);}return tipEl;}
+  document.addEventListener('mouseover',e=>{
+    const btn=e.target.closest('[data-tip]');
+    const sb=document.getElementById('sb');
+    if(btn&&sb&&sb.classList.contains('collapsed')){
+      const tip=getTip();
+      tip.textContent=btn.getAttribute('data-tip');
+      const r=btn.getBoundingClientRect();
+      tip.style.left=(r.right+10)+'px';
+      tip.style.top=(r.top+r.height/2)+'px';
+      tip.style.transform='translateY(-50%)';
+      tip.classList.add('vis');
+    }
+  });
+  document.addEventListener('mouseout',e=>{
+    const btn=e.target.closest('[data-tip]');
+    if(btn){const tip=getTip();tip.classList.remove('vis');}
+  });
+})();
 </script>
 </body>
 </html>
