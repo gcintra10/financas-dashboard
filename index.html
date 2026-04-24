@@ -556,10 +556,6 @@ tbody tr:hover td{background:var(--ci)}
           <button class="mn-b" onclick="mudarMes(1)">›</button>
           <button class="mn-b" onclick="mudarMes(0)" style="font-size:11px">↺</button>
         </div>
-        <div class="view-toggle">
-          <button class="vt-btn active" id="vtMes" onclick="setView('mes')">Este mês</button>
-          <button class="vt-btn" id="vtGeral" onclick="setView('geral')">Visão geral</button>
-        </div>
         <button class="ad-btn" onclick="abrirModal()">+ Lançamento</button>
         <button class="ic-btn" onclick="toggleTema()" id="topTh">☀️</button>
       </div>
@@ -1303,7 +1299,12 @@ function processarDados(tr,ve,me,ins,es,gf,mesStr){
     }
   });
 
-  return{rec,td,saldo:rec-td,saldoAV:rec-td-tp,gpp,topC,hist,histPilares,vp,tp,tv,mArr,iArr,eArr,naoMap,proj,ultTr,rendaPerfil,invTotal,despFixasMes};
+  // Saldo total acumulado (todas as transações)
+  const saldoTotalRec=lt.filter(r=>r[3]==='Receita').reduce((s,r)=>s+num(r[2]),0);
+  const saldoTotalDesp=lt.filter(r=>r[3]==='Despesa').reduce((s,r)=>s+Math.abs(num(r[2])),0);
+  const saldoTotal=saldoTotalRec-saldoTotalDesp;
+
+  return{rec,td,saldo:rec-td,saldoAV:rec-td-tp,gpp,topC,hist,histPilares,vp,tp,tv,mArr,iArr,eArr,naoMap,proj,ultTr,rendaPerfil,invTotal,despFixasMes,saldoTotal};
 }
 
 function num(v){if(typeof v==='number')return v;return parseFloat((v||'0').toString().replace(/[^0-9.,-]/g,'').replace(',','.'))||0;}
@@ -1357,6 +1358,13 @@ function rVisao(){
   const pills=gerarInsightPills(d);
 
   let html=`
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+    <div class="view-toggle">
+      <button class="vt-btn active" id="vtMes" onclick="setView('mes')">📅 Este mês</button>
+      <button class="vt-btn" id="vtGeral" onclick="setView('geral')">🌐 Visão geral</button>
+    </div>
+    <div style="font-size:12px;color:var(--t3);font-weight:500">${MESES[ST.mesIdx]} ${ST.ano}</div>
+  </div>
   ${d.naoMap.length>0?`<div class="alert-bar" onclick="nav('estab',document.querySelector('[onclick*=estab]'))">⚠️ <strong>${d.naoMap.length} estabelecimento(s)</strong> aguardando mapeamento</div>`:''}
   ${pills.length>0?`<div class="ip-row">${pills.map(p=>`<span class="ip ${p.cls}"><span class="ip-icon">${p.icon}</span>${p.txt}</span>`).join('')}</div>`:''}
   <div class="kpi-row">
@@ -1368,8 +1376,12 @@ function rVisao(){
         <div class="kpi-detail-row"><span>Renda base perfil</span><span class="kpi-detail-val" style="color:var(--gr)">${fmt(d.rendaPerfil)}</span></div>
         ${d.rec!==d.rendaPerfil&&d.rec>0?`<div class="kpi-detail-row"><span>Variação</span><span class="kpi-detail-val" style="color:${d.rec>d.rendaPerfil?'var(--gr)':'var(--am)'}">${d.rec>d.rendaPerfil?'+':''}${fmt(d.rec-d.rendaPerfil)}</span></div>`:''}
         <div class="kpi-detail-row" style="border-top:1px solid var(--b);margin-top:4px;padding-top:4px">
-          <span>Saldo acum. 6m</span>
-          <span class="kpi-detail-val" style="color:${d.hist.reduce((s,h)=>s+h.saldo,0)>=0?'var(--gr)':'var(--re)'}">${fmt(d.hist.reduce((s,h)=>s+h.saldo,0))}</span>
+          <span>Saldo total acum.</span>
+          <span class="kpi-detail-val" style="color:${d.saldoTotal>=0?'var(--gr)':'var(--re)'}">${fmt(d.saldoTotal)}</span>
+        </div>
+        <div class="kpi-detail-row">
+          <span>Saldo + investido</span>
+          <span class="kpi-detail-val" style="color:var(--ac)">${fmt(d.saldoTotal+d.invTotal)}</span>
         </div>
       </div>
       <div class="kpi-mini-bar"><div class="kpi-mini-fill gr" style="width:${Math.min(100,d.rec/Math.max(d.rendaPerfil,1)*100)}%"></div></div>
@@ -1461,15 +1473,74 @@ function rVisao(){
 
   document.getElementById('sec-visao').innerHTML=html;
 
-  // Gráfico linha fino
+  // Gráfico misto: barras receita/despesa + linha saldo
   dc('cL');
   const ctxL=document.getElementById('cL')?.getContext('2d');
   if(ctxL&&d.hist.length>0){
-    charts['cL']=new Chart(ctxL,{type:'line',data:{labels:d.hist.map(h=>h.mes),datasets:[
-      {label:'Receita',data:d.hist.map(h=>h.receita),borderColor:gc('gr'),backgroundColor:'transparent',tension:.4,pointBackgroundColor:gc('gr'),pointRadius:3,borderWidth:1.5},
-      {label:'Despesa',data:d.hist.map(h=>h.despesa),borderColor:gc('re'),backgroundColor:'transparent',tension:.4,pointBackgroundColor:gc('re'),pointRadius:3,borderWidth:1.5},
-      {label:'Saldo',data:d.hist.map(h=>h.saldo),borderColor:gc('ac'),backgroundColor:'transparent',tension:.4,pointBackgroundColor:gc('ac'),pointRadius:3,borderWidth:1.5,borderDash:[4,3]},
-    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:gc('t2'),font:{size:11,family:'Plus Jakarta Sans'},boxWidth:8,padding:10}}},scales:{x:{ticks:{color:gc('t2'),font:{size:11}},grid:{color:gc('b')}},y:{ticks:{color:gc('t2'),font:{size:11},callback:v=>v===0?'0':'R$'+Math.abs(v/1000).toFixed(0)+'k'},grid:{color:gc('b')}}}}});
+    const saldos=d.hist.map(h=>h.saldo);
+    charts['cL']=new Chart(ctxL,{
+      type:'bar',
+      data:{
+        labels:d.hist.map(h=>h.mes),
+        datasets:[
+          {
+            label:'Receita',
+            data:d.hist.map(h=>h.receita),
+            backgroundColor:gc('gr')+'55',
+            borderColor:gc('gr'),
+            borderWidth:1.5,
+            borderRadius:6,
+            borderSkipped:false,
+            order:2,
+          },
+          {
+            label:'Despesa',
+            data:d.hist.map(h=>h.despesa),
+            backgroundColor:gc('re')+'55',
+            borderColor:gc('re'),
+            borderWidth:1.5,
+            borderRadius:6,
+            borderSkipped:false,
+            order:2,
+          },
+          {
+            label:'Saldo',
+            data:saldos,
+            type:'line',
+            borderColor:gc('ac'),
+            backgroundColor:'transparent',
+            tension:.4,
+            pointBackgroundColor:saldos.map(s=>s>=0?gc('ac'):gc('re')),
+            pointRadius:5,
+            pointHoverRadius:7,
+            borderWidth:2.5,
+            order:1,
+            datalabels:{
+              display:true,
+              anchor:'end',
+              align:(ctx)=>saldos[ctx.dataIndex]>=0?'top':'bottom',
+              color:(ctx)=>saldos[ctx.dataIndex]>=0?gc('ac'):gc('re'),
+              font:{size:10,weight:'700',family:'Plus Jakarta Sans'},
+              formatter:(v)=>(v>=0?'+':'')+fmt(v).replace('R$ ','R$'),
+            }
+          },
+        ]
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{
+          legend:{labels:{color:gc('t2'),font:{size:11,family:'Plus Jakarta Sans'},boxWidth:8,padding:10}},
+          tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${fmt(ctx.raw)}`}},
+          datalabels:{display:false}, // padrão off, só o saldo tem
+        },
+        scales:{
+          x:{ticks:{color:gc('t2'),font:{size:11}},grid:{display:false}},
+          y:{ticks:{color:gc('t2'),font:{size:11},callback:v=>'R$'+Math.abs(v/1000).toFixed(0)+'k'},grid:{color:gc('b')}}
+        },
+        layout:{padding:{top:20}}
+      }
+    });
   }
 
   renderChartCat();
@@ -1577,7 +1648,10 @@ function rVisaoGeral(){
 
 function rPilares(){
   const d=ST.dados;
-  let html=`<div class="g2">
+  const pills=getPillsPilares(d);
+  let html=`
+  ${pills.length>0?`<div class="ip-row">${pills.map(p=>`<span class="ip ${p.cls}"><span class="ip-icon">${p.icon}</span>${p.txt}</span>`).join('')}</div>`:''}
+  <div class="g2">
     <div class="cc">
       <div class="cc-hd"><div><div class="cc-ti">Meta vs Real</div><div class="cc-su">Base: ${fmt(d.rendaPerfil||d.rec)}/mês</div></div></div>`;
   const ref=d.rendaPerfil||d.rec;
@@ -1627,13 +1701,27 @@ function rPilares(){
   }
 }
 
+function getPillsVenc(d){
+  const pills=[];
+  const hoje=new Date();hoje.setHours(0,0,0,0);
+  const urgentes=d.vp.filter(v=>{const dt=pD(v.vencimento);return dt&&Math.round((dt-hoje)/864e5)<=3;});
+  const atrasados=d.vp.filter(v=>v.status==='Atrasado');
+  if(atrasados.length>0) pills.push({cls:'re',icon:'🔴',txt:`${atrasados.length} em atraso`});
+  if(urgentes.length>0) pills.push({cls:'am',icon:'⏰',txt:`${urgentes.length} vence em até 3 dias`});
+  if(d.tp>0) pills.push({cls:'re',icon:'💸',txt:`Total pendente: ${fmt(d.tp)}`});
+  if(d.vp.length===0) pills.push({cls:'gr',icon:'✅',txt:'Nenhum vencimento nos próximos 30 dias'});
+  return pills;
+}
 function rVenc(){
   const d=ST.dados,hoje=new Date();hoje.setHours(0,0,0,0);
   const ano=ST.ano,mes=ST.mesIdx;
   const first=new Date(ano,mes,1).getDay(),total=new Date(ano,mes+1,0).getDate();
   const dias=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
-  let html=`<div class="g64" style="align-items:start">
+  const pillsV=getPillsVenc(d);
+  let html=`
+  ${pillsV.length>0?`<div class="ip-row">${pillsV.map(p=>`<span class="ip ${p.cls}"><span class="ip-icon">${p.icon}</span>${p.txt}</span>`).join('')}</div>`:''}
+  <div class="g64" style="align-items:start">
     <div class="cc" style="padding:0">
       <div style="padding:16px 20px 0;display:flex;justify-content:space-between;align-items:center">
         <div><div class="cc-ti">Próximos 30 dias</div><div class="cc-su">${d.vp.length} vencimento(s) · Total: ${fmt(d.tp)}</div></div>
@@ -1682,7 +1770,14 @@ function rVenc(){
 
 function rIns(){
   const d=ST.dados;
-  let html=`<div style="font-size:13px;color:var(--t2);margin-bottom:16px">Gerados automaticamente às 03:00 com base nos seus dados reais.</div>`;
+  const altas=d.iArr.filter(i=>i.prioridade==='Alta').length;
+  const pillsI=[];
+  if(altas>0) pillsI.push({cls:'re',icon:'🔴',txt:`${altas} alerta(s) de alta prioridade`});
+  if(d.iArr.length>0) pillsI.push({cls:'ac',icon:'🤖',txt:`${d.iArr.length} insights gerados`});
+  if(d.iArr.length===0) pillsI.push({cls:'nu',icon:'⏳',txt:'Aguardando próxima análise (03:00)'});
+  let html=`
+  ${pillsI.length>0?`<div class="ip-row">${pillsI.map(p=>`<span class="ip ${p.cls}"><span class="ip-icon">${p.icon}</span>${p.txt}</span>`).join('')}</div>`:''}
+  <div style="font-size:13px;color:var(--t2);margin-bottom:16px">Gerados automaticamente às 03:00 com base nos seus dados reais.</div>`;
   if(!d.iArr||d.iArr.length===0){html+=`<div class="empty">🤖<br>Ainda sem insights. Aparecem após a primeira análise noturna.</div>`;}
   else{html+=`<div class="ins-g">`;d.iArr.forEach(i=>{const p=(i.prioridade||'').toLowerCase().substring(0,2);const c=i.tipo==='Investimento'?'iv':p==='al'?'al':p==='mé'||p==='me'?'md':p==='in'?'in':'bx';html+=`<div class="ins-c ${c}"><span class="ins-bd ${c}">${i.tipo||'Análise'}</span><div class="ins-ti">${i.titulo||''}</div><div class="ins-tx">${i.analise||''}</div>${i.acao?`<div class="ins-ac">→ ${i.acao}</div>`:''}</div>`;});html+=`</div>`;}
   document.getElementById('sec-ins').innerHTML=html;
