@@ -558,7 +558,7 @@ tbody tr:hover td{background:var(--ci)}
         </div>
         <button class="ad-btn" onclick="abrirModal()">+ Lançamento</button>
         <button class="ic-btn" onclick="toggleTema()" id="topTh">☀️</button>
-        <span id="lastUpdate" style="font-size:11px;color:var(--t3);white-space:nowrap;display:none">atualizado às <strong id="lastUpdateTime"></strong></span>
+        <span id="lastUpdate" style="font-size:11px;color:var(--t3);white-space:nowrap;display:none">🕐 <strong id="lastUpdateTime"></strong></span>
       </div>
     </header>
 
@@ -572,7 +572,14 @@ tbody tr:hover td{background:var(--ci)}
       <div class="sec" id="sec-chat">
         <div class="ch-sh">
           <div class="ch-bx">
-            <div class="ch-hd"><div class="ch-av">🤖</div><div><strong style="font-size:14px">Assistente Financeiro</strong><div style="font-size:11px;color:var(--t3)">Claude AI</div></div><span class="ch-on">● Online</span></div>
+            <div class="ch-hd">
+              <div class="ch-av">🤖</div>
+              <div><strong style="font-size:14px">Assistente Financeiro</strong><div style="font-size:11px;color:var(--t3)">Claude AI · Sonnet</div></div>
+              <div style="margin-left:auto;text-align:right">
+                <span class="ch-on">● Online</span>
+                <div style="font-size:10px;color:var(--t3);margin-top:2px">~<span id="chatCost">$0.00</span> · <span id="chatMsgs2">0</span> msgs</div>
+              </div>
+            </div>
             <div class="ch-ms" id="chMs"><div class="msg ai"><div class="msg-av">🤖</div><div class="msg-b">Olá! Tenho acesso aos seus dados. Pergunte sobre gastos, metas ou investimentos.</div></div></div>
             <div class="ch-ir"><textarea class="ch-in" id="chIn" rows="1" placeholder="Pergunte sobre suas finanças..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarMsg()}" oninput="autoR(this)"></textarea><button class="ch-sd" onclick="enviarMsg()"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button></div>
           </div>
@@ -1157,9 +1164,9 @@ async function carregarDados(){
     const el=document.getElementById('lastUpdate');
     const tel=document.getElementById('lastUpdateTime');
     if(el&&tel){
-      tel.textContent=agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      tel.textContent=agora.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
       el.style.display='';
-      el.title='Dados carregados em '+agora.toLocaleString('pt-BR');
+      el.title='Última atualização: '+agora.toLocaleString('pt-BR');
     }
   }catch(e){
     console.error('Erro ao processar dados:',e);
@@ -1272,8 +1279,13 @@ function processarDados(tr,ve,me,ins,es,gf,mesStr){
 
   // Projeção com detalhamento
   const invTotal=JSON.parse(ls('fin_inv')||'[]').reduce((s,i)=>s+(i.valor||0),0);
-  // despFixasMes = soma dos gastos fixos ativos da planilha (mais preciso que só onboarding)
-  const despFixasMes=gfRows.filter(r=>r[7]==='Sim'||r[7]===true).reduce((s,r)=>s+Math.abs(num(r[3])),0)||despesasOB.reduce((s,d)=>s+(d.valor||0),0);
+  // despFixasMes = o que de fato foi gasto em fixos/carnês no mês selecionado
+  // Se mês está em aberto: usa cadastro de gastos fixos; se fechado: usa transações reais
+  const despFixasCadastro=gfRows.filter(r=>r[7]==='Sim'||r[7]===true).reduce((s,r)=>s+Math.abs(num(r[3])),0)||despesasOB.reduce((s,d)=>s+(d.valor||0),0);
+  // Identifica gastos fixos reais no mês: transações com observação "Importado" ou "fixo" ou pilar Necessidades
+  const despFixasReais=tm.filter(r=>r[3]==='Despesa'&&(r[4]==='Necessidades'||String(r[10]).toLowerCase().includes('fixo')||String(r[10]).toLowerCase().includes('carnê')||String(r[10]).toLowerCase().includes('empréstimo'))).reduce((s,r)=>s+Math.abs(num(r[2])),0);
+  const isMesAtual=(ST.mesIdx===new Date().getMonth()&&ST.ano===new Date().getFullYear());
+  const despFixasMes=isMesAtual?despFixasCadastro:(despFixasReais>0?despFixasReais:despFixasCadastro);
   const receitaBase=rendaPerfil||rec;
   const proj=[];
   for(let m=1;m<=3;m++){
@@ -1309,9 +1321,9 @@ function processarDados(tr,ve,me,ins,es,gf,mesStr){
     }
   });
 
-  // Saldo total acumulado (todas as transações)
-  const saldoTotalRec=lt.filter(r=>r[3]==='Receita').reduce((s,r)=>s+num(r[2]),0);
-  const saldoTotalDesp=lt.filter(r=>r[3]==='Despesa').reduce((s,r)=>s+Math.abs(num(r[2])),0);
+  // Saldo total acumulado — excluindo o mês atual selecionado
+  const saldoTotalRec=lt.filter(r=>r[3]==='Receita'&&normJ(r[9])!==mesStr).reduce((s,r)=>s+num(r[2]),0);
+  const saldoTotalDesp=lt.filter(r=>r[3]==='Despesa'&&normJ(r[9])!==mesStr).reduce((s,r)=>s+Math.abs(num(r[2])),0);
   const saldoTotal=saldoTotalRec-saldoTotalDesp;
 
   // Histórico completo (all time) para gráfico acumulado
@@ -1403,6 +1415,7 @@ function rVisao(){
           <span class="kpi-detail-val" style="color:var(--ac)">${fmt(d.saldoTotal+d.invTotal)}</span>
         </div>
       </div>
+      <div style="height:14px"></div>
       <div class="kpi-mini-bar"><div class="kpi-mini-fill gr" style="width:${Math.min(100,d.rec/Math.max(d.rendaPerfil,1)*100)}%"></div></div>
     </div>
     <div class="kpi k-re">
@@ -1449,7 +1462,7 @@ function rVisao(){
       <div class="kpi-lbl">Saldo após vencimentos</div>
       <div class="kpi-detail">
         <div class="kpi-detail-row"><span>Total pendente</span><span class="kpi-detail-val" style="color:var(--re)">${fmt(d.tp)}</span></div>
-        ${d.vp.length>0?`<div class="kpi-detail-row"><span>Próximo</span><span class="kpi-detail-val">${d.vp[0]?.nome?.substring(0,14)||'-'}</span></div>`:'<div class="kpi-detail-row"><span>Status</span><span class="kpi-detail-val" style="color:var(--gr)">Em dia ✓</span></div>'}
+        ${d.vp.length>0?`<div class="kpi-detail-row"><span>Próximo</span><span class="kpi-detail-val" style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${d.vp[0]?.nome||'-'}">${d.vp[0]?.nome||'-'}</span></div>`:'<div class="kpi-detail-row"><span>Status</span><span class="kpi-detail-val" style="color:var(--gr)">Em dia ✓</span></div>'}
         <div class="kpi-detail-row" style="border-top:1px solid var(--b);margin-top:4px;padding-top:4px">
           <span>Urgentes (≤3 dias)</span>
           <span class="kpi-detail-val" style="color:${d.vp.filter(v=>{const dt=pD(v.vencimento);return dt&&Math.round((dt-new Date())/864e5)<=3;}).length>0?'var(--re)':'var(--gr)'}">
@@ -1579,8 +1592,8 @@ function rVisaoGeral(){
   const rendaBase=d.rendaPerfil||d.rec||0;
   const pills=gerarInsightPills(d);
 
-  // Calcular saldo acumulado (soma dos saldos dos últimos 6 meses)
-  const saldoAcum=d.hist.reduce((s,h)=>s+h.saldo,0);
+  // Usar saldoTotal calculado no processarDados (exclui mês selecionado)
+  const saldoAcum=d.saldoTotal||0;
 
   document.getElementById('sec-visao').innerHTML=`
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
@@ -1633,9 +1646,9 @@ function rVisaoGeral(){
       </div>
     </div>
     <div class="cc">
-      <div class="cc-hd"><div><div class="cc-ti">Progresso das metas</div><div class="cc-su">${metasMes.length} meta(s) ativa(s)</div></div></div>
-      ${metasMes.length===0?'<div class="empty" style="padding:20px">Nenhuma meta no perfil</div>':
-      metasMes.map(m=>{
+      <div class="cc-hd"><div><div class="cc-ti">Progresso das metas</div><div class="cc-su">${d.mArr.length} meta(s) ativa(s)</div></div></div>
+      ${d.mArr.length===0?'<div class="empty" style="padding:20px">Nenhuma meta na aba Metas</div>':
+      d.mArr.map(m=>{
         const pct2=m.total>0?Math.min(100,(m.guardado||0)/m.total*100):0;
         const meses=m.aporte>0?Math.ceil(((m.total||0)-(m.guardado||0))/Math.max(m.aporte,1)):'?';
         return`<div style="margin-bottom:12px">
@@ -1731,13 +1744,38 @@ function rPilares(){
   const ctxR=document.getElementById('cRad')?.getContext('2d');
   if(ctxR){
     const pl=Object.keys(PM);
-    const metaVals=pl.map(p=>100);
-    const _ref2=d.rendaPerfil||d.rec||1;
-    const realVals=pl.map(p=>{const meta=_ref2*PM[p];const real=d.gpp[p]||0;return meta>0?Math.min(130,+(real/meta*100).toFixed(0)):0;});
-    charts['cRad']=new Chart(ctxR,{type:'radar',data:{labels:pl.map(p=>PI[p]+' '+p),datasets:[
-      {label:'Meta (100%)',data:metaVals,borderColor:gc('b2')||gc('b'),backgroundColor:'transparent',borderWidth:1.5,pointRadius:3},
-      {label:'Realizado',data:realVals,borderColor:gc('ac'),backgroundColor:gc('ac')+'22',borderWidth:2,pointBackgroundColor:gc('ac'),pointRadius:4},
-    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:gc('t2'),font:{size:11,family:'Plus Jakarta Sans'},boxWidth:10}}},scales:{r:{ticks:{color:gc('t2'),font:{size:10},stepSize:25},grid:{color:gc('b')},pointLabels:{color:gc('t2'),font:{size:11}},min:0,max:130}}}});
+    const ref3=d.rendaPerfil||d.rec||1;
+    const realPct=pl.map(p=>{const meta=ref3*PM[p];const real=d.gpp[p]||0;return meta>0?Math.min(140,+(real/meta*100).toFixed(0)):0;});
+    const barCols=realPct.map(v=>v>110?gc('re')+'BB':v>85?gc('am')+'BB':gc('gr')+'BB');
+    const barBorder=realPct.map(v=>v>110?gc('re'):v>85?gc('am'):gc('gr'));
+    charts['cRad']=new Chart(ctxR,{
+      type:'bar',
+      data:{
+        labels:pl.map(p=>PI[p]+' '+p),
+        datasets:[
+          {label:'Meta 100%',data:pl.map(()=>100),backgroundColor:'transparent',borderColor:gc('b'),borderWidth:1.5,borderSkipped:false,barPercentage:.8,categoryPercentage:.85,datalabels:{display:false}},
+          {label:'Realizado %',data:realPct,backgroundColor:barCols,borderColor:barBorder,borderWidth:1.5,borderRadius:{topLeft:6,topRight:6},borderSkipped:false,barPercentage:.5,categoryPercentage:.85,
+            datalabels:{display:true,anchor:'end',align:'top',color:(c)=>barBorder[c.dataIndex],font:{size:10,weight:'700'},formatter:(v)=>v+'%'}
+          },
+        ]
+      },
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{
+          legend:{labels:{color:gc('t2'),font:{size:11},boxWidth:8,padding:8}},
+          tooltip:{callbacks:{label:(c)=>{
+            if(c.dataset.label==='Meta 100%') return 'Meta: 100%';
+            const p=pl[c.dataIndex];const meta=ref3*PM[p];const real=d.gpp[p]||0;
+            return `Realizado: ${c.raw}% · ${fmt(real)} / ${fmt(meta)}`;
+          }}},
+          datalabels:{display:false}
+        },
+        scales:{
+          x:{ticks:{color:gc('t2'),font:{size:10}},grid:{display:false},border:{display:false}},
+          y:{min:0,max:155,ticks:{color:gc('t2'),font:{size:10},callback:v=>v+'%',maxTicksLimit:6},grid:{color:gc('b')},border:{display:false}}
+        },
+        layout:{padding:{top:20}}
+      }
+    });
   }
 }
 
@@ -1977,13 +2015,14 @@ function renderEvolChart(){
     const pad=Math.max(Math.abs(maxS-minS)*0.2,500);
     charts['cL']=new Chart(ctx,{type:'line',data:{labels:d.hist.map(h=>h.mes),datasets:[{
       label:'Saldo',data:saldos,
-      borderColor:gc('ac'),
-      backgroundColor:(ctx2)=>{const g=ctx2.chart.ctx.createLinearGradient(0,0,0,200);g.addColorStop(0,gc('ac')+'55');g.addColorStop(1,gc('ac')+'05');return g;},
+      borderColor:(ctx2)=>{const s=saldos[ctx2.dataIndex||0];return s>=0?gc('gr'):gc('re');},
+      segment:{borderColor:(ctx2)=>saldos[ctx2.p1DataIndex]>=0?gc('gr'):gc('re')},
+      backgroundColor:(ctx2)=>{const g=ctx2.chart.ctx.createLinearGradient(0,0,0,200);const pos=saldos.some(s=>s>=0);g.addColorStop(0,(pos?gc('gr'):gc('re'))+'55');g.addColorStop(1,(pos?gc('gr'):gc('re'))+'05');return g;},
       fill:true,tension:.4,
-      pointBackgroundColor:saldos.map(s=>s>=0?gc('ac'):gc('re')),
+      pointBackgroundColor:saldos.map(s=>s>=0?gc('gr'):gc('re')),
       pointBorderColor:'#fff',pointBorderWidth:2,pointRadius:5,pointHoverRadius:7,borderWidth:2.5,
-      datalabels:{display:true,anchor:(c)=>saldos[c.dataIndex]>=0?'end':'start',align:(c)=>saldos[c.dataIndex]>=0?'top':'bottom',color:(c)=>saldos[c.dataIndex]>=0?gc('ac'):gc('re'),font:{size:10,weight:'700'},formatter:(v)=>'R$'+(v/1000).toFixed(1)+'k'}
-    }]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`Saldo: ${fmt(c.raw)}`}},datalabels:{display:false}},scales:{x:{ticks:{color:gc('t2'),font:{size:11}},grid:{display:false},border:{display:false}},y:{min:minS-pad,max:maxS+pad,ticks:{color:gc('t2'),font:{size:11},callback:v=>'R$'+(v/1000).toFixed(0)+'k',maxTicksLimit:5},grid:{color:gc('b')},border:{display:false}}},layout:{padding:{top:20}}}});
+      datalabels:{display:true,anchor:(c)=>saldos[c.dataIndex]>=0?'end':'start',align:(c)=>saldos[c.dataIndex]>=0?'top':'bottom',color:(c)=>saldos[c.dataIndex]>=0?gc('gr'):gc('re'),font:{size:10,weight:'700'},formatter:(v)=>{const abs=Math.abs(v);return abs>=1000?'R$'+(v/1000).toFixed(1)+'k':fmt(v);}}
+    }]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`Saldo: ${fmt(c.raw)}`}},datalabels:{display:false}},scales:{x:{ticks:{color:gc('t2'),font:{size:11}},grid:{display:false},border:{display:false}},y:{min:minS-pad,max:maxS+pad,ticks:{color:gc('t2'),font:{size:11},callback:v=>{const abs=Math.abs(v);return abs>=1000?'R$'+(v/1000).toFixed(0)+'k':fmt(v);},maxTicksLimit:5},grid:{color:gc('b')},border:{display:false}}},layout:{padding:{top:20}}}});
   }
   else if(_evolMode==='acum'){
     // Saldo acumulado — calcular da lista de hist ou all time
@@ -1994,14 +2033,15 @@ function renderEvolChart(){
     const padA=Math.max(Math.abs(maxA-minA)*0.15,500);
     charts['cL']=new Chart(ctx,{type:'line',data:{labels:hist.map(h=>h.mes),datasets:[{
       label:'Saldo acumulado',data:acums,
-      borderColor:gc('ac'),
-      backgroundColor:(ctx2)=>{const g=ctx2.chart.ctx.createLinearGradient(0,0,0,200);g.addColorStop(0,gc('ac')+'44');g.addColorStop(1,gc('ac')+'04');return g;},
+      segment:{borderColor:(ctx2)=>acums[ctx2.p1DataIndex]>=0?gc('gr'):gc('re')},
+      borderColor:acums[acums.length-1]>=0?gc('gr'):gc('re'),
+      backgroundColor:(ctx2)=>{const g=ctx2.chart.ctx.createLinearGradient(0,0,0,200);const pos=acums[acums.length-1]>=0;g.addColorStop(0,(pos?gc('gr'):gc('re'))+'44');g.addColorStop(1,(pos?gc('gr'):gc('re'))+'04');return g;},
       fill:true,tension:.35,
-      pointBackgroundColor:acums.map(s=>s>=0?gc('ac'):gc('re')),
+      pointBackgroundColor:acums.map(s=>s>=0?gc('gr'):gc('re')),
       pointBorderColor:'#fff',pointBorderWidth:2,
       pointRadius:(ctx2)=>ctx2.dataIndex===acums.length-1?6:3,
       pointHoverRadius:7,borderWidth:2.5,
-      datalabels:{display:(ctx2)=>ctx2.dataIndex===acums.length-1,anchor:'end',align:'top',color:acums[acums.length-1]>=0?gc('ac'):gc('re'),font:{size:10,weight:'700'},formatter:(v)=>fmt(v)}
+      datalabels:{display:(ctx2)=>ctx2.dataIndex===acums.length-1,anchor:'end',align:'top',color:acums[acums.length-1]>=0?gc('gr'):gc('re'),font:{size:10,weight:'700'},formatter:(v)=>{const abs=Math.abs(v);return abs>=1000?'R$'+(v/1000).toFixed(1)+'k':fmt(v);}}
     }]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`Acumulado: ${fmt(c.raw)}`}},datalabels:{display:false}},scales:{x:{ticks:{color:gc('t2'),font:{size:11}},grid:{display:false},border:{display:false}},y:{min:minA-padA,max:maxA+padA,ticks:{color:gc('t2'),font:{size:11},callback:v=>'R$'+(v/1000).toFixed(0)+'k',maxTicksLimit:5},grid:{color:gc('b')},border:{display:false}}},layout:{padding:{top:20}}}});
   }
 }
@@ -2261,9 +2301,16 @@ function mostrarCalTooltip(e,dataStr){
 
 // ══ CHAT ════════════════════════════════════════════════════
 function pq(p){document.getElementById('chIn').value=p;enviarMsg();}
+let _chatMsgCount=0,_chatCostUSD=0;
 async function enviarMsg(){
   const inp=document.getElementById('chIn');const pg=inp.value.trim();if(!pg)return;
   inp.value='';inp.style.height='auto';addMsg('u',pg);
+  _chatMsgCount++;
+  // Estimativa: ~800 tokens input + ~300 output por mensagem · Sonnet = $3/M input, $15/M output
+  _chatCostUSD+=((800*3)+(300*15))/1000000;
+  const cc=document.getElementById('chatCost');const cm=document.getElementById('chatMsgs2');
+  if(cc) cc.textContent='$'+_chatCostUSD.toFixed(4);
+  if(cm) cm.textContent=_chatMsgCount;
   const tid='t'+Date.now();addMsg('ai',`<span class="td"></span><span class="td"></span><span class="td"></span>`,tid);
   try{const r=await fetch(CFG.scriptUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'chat',pergunta:pg,sheetId:CFG.sheetId,secret:CFG.secret})});const dados=await r.json();document.getElementById(tid)?.remove();addMsg('ai',dados.resposta||'Sem resposta.');}
   catch(e){document.getElementById(tid)?.remove();addMsg('ai','⚠️ Não foi possível conectar.');}
