@@ -1258,12 +1258,55 @@ function processarDados(tr,ve,me,ins,es,gf,mesStr){
     }
   });
 
+  // Mapa de vencimento por cartão (banco → dia de vencimento)
+  const vencCartao={};
+  try{const bs=JSON.parse(ls('fin_bancos')||'[]');bs.forEach(b=>{if(b.vc&&b.cr)vencCartao[b.cr]=parseInt(b.vc);});}catch{}
+  // Fallback: valores padrão
+  const vencPadrao={'Crédito Nubank':10,'Crédito Itaú':27,'Crédito Bradesco':22,'Crédito Inter':14,'Crédito BB':12,'Crédito Santander':17};
+  Object.keys(vencPadrao).forEach(k=>{if(!vencCartao[k])vencCartao[k]=vencPadrao[k];});
+
+  // Transações de cartão de crédito do mês → gerar vencimento correto
+  // Agrupar por cartão e calcular total da fatura
+  const faturasPorCartao={};
+  tm.filter(r=>r[3]==='Despesa'&&String(r[6]).startsWith('Crédito')).forEach(r=>{
+    const meio=r[6];
+    const diaVenc=vencCartao[meio]||10;
+    if(!faturasPorCartao[meio]){
+      let pv=new Date(hoje.getFullYear(),hoje.getMonth(),diaVenc);
+      if(pv<hoje)pv=new Date(hoje.getFullYear(),hoje.getMonth()+1,diaVenc);
+      faturasPorCartao[meio]={nome:'Fatura '+meio.replace('Crédito ',''),valor:0,diaVenc,vencimento:pv.toISOString().split('T')[0],status:'Pendente',banco:meio,origem:'fatura'};
+    }
+    faturasPorCartao[meio].valor+=Math.abs(num(r[2]));
+  });
+  // Adicionar faturas calculadas se não existirem já
+  Object.values(faturasPorCartao).forEach(f=>{
+    if(f.valor>0){
+      const jaExiste=vTodos.some(v=>v.nome===f.nome);
+      if(!jaExiste) vTodos.push(f);
+      else {
+        // Atualizar valor se já existe como "Fatura X"
+        const idx=vTodos.findIndex(v=>v.nome===f.nome);
+        if(idx>=0&&vTodos[idx].valor===0) vTodos[idx].valor=f.valor;
+      }
+    }
+  });
+
   // Atualizar próximo vencimento para registros sem data
   vTodos=vTodos.map(v=>{
     if(!v.vencimento&&v.diaVenc){
       let pv=new Date(hoje.getFullYear(),hoje.getMonth(),v.diaVenc);
       if(pv<hoje)pv=new Date(hoje.getFullYear(),hoje.getMonth()+1,v.diaVenc);
       v.vencimento=pv.toISOString().split('T')[0];
+    }
+    // Corrigir: itens individuais de cartão de crédito devem ter a data de vencimento do cartão
+    if(v.banco&&String(v.banco).startsWith('Crédito')&&v.origem==='planilha'){
+      const diaCorreto=vencCartao[v.banco];
+      if(diaCorreto){
+        let pv=new Date(hoje.getFullYear(),hoje.getMonth(),diaCorreto);
+        if(pv<hoje)pv=new Date(hoje.getFullYear(),hoje.getMonth()+1,diaCorreto);
+        v.diaVenc=diaCorreto;
+        v.vencimento=pv.toISOString().split('T')[0];
+      }
     }
     return v;
   });
@@ -1282,8 +1325,15 @@ function processarDados(tr,ve,me,ins,es,gf,mesStr){
   // despFixasMes = o que de fato foi gasto em fixos/carnês no mês selecionado
   // Se mês está em aberto: usa cadastro de gastos fixos; se fechado: usa transações reais
   const despFixasCadastro=gfRows.filter(r=>r[7]==='Sim'||r[7]===true).reduce((s,r)=>s+Math.abs(num(r[3])),0)||despesasOB.reduce((s,d)=>s+(d.valor||0),0);
-  // Identifica gastos fixos reais no mês: transações com observação "Importado" ou "fixo" ou pilar Necessidades
-  const despFixasReais=tm.filter(r=>r[3]==='Despesa'&&(r[4]==='Necessidades'||String(r[10]).toLowerCase().includes('fixo')||String(r[10]).toLowerCase().includes('carnê')||String(r[10]).toLowerCase().includes('empréstimo'))).reduce((s,r)=>s+Math.abs(num(r[2])),0);
+  // Identifica gastos fixos reais no mês: transações que batem com o cadastro de gastos fixos pelo nome
+  const nomesFixos=new Set([...gfRows.map(r=>String(r[0]).toLowerCase()),...despesasOB.map(d=>String(d.desc).toLowerCase())]);
+  const despFixasReais=tm.filter(r=>r[3]==='Despesa'&&(
+    nomesFixos.has(String(r[1]).toLowerCase())||
+    String(r[10]).toLowerCase().includes('carnê')||
+    String(r[10]).toLowerCase().includes('empréstimo')||
+    String(r[10]).toLowerCase().includes('parcelamento')||
+    String(r[10]).toLowerCase().includes('fixo')
+  )).reduce((s,r)=>s+Math.abs(num(r[2])),0);
   const isMesAtual=(ST.mesIdx===new Date().getMonth()&&ST.ano===new Date().getFullYear());
   const despFixasMes=isMesAtual?despFixasCadastro:(despFixasReais>0?despFixasReais:despFixasCadastro);
   const receitaBase=rendaPerfil||rec;
@@ -1405,7 +1455,7 @@ function rVisao(){
       <div class="kpi-lbl">Receita — ${MESES[ST.mesIdx]}</div>
       <div class="kpi-detail">
         <div class="kpi-detail-row"><span>Renda base perfil</span><span class="kpi-detail-val" style="color:var(--gr)">${fmt(d.rendaPerfil)}</span></div>
-        ${d.rec!==d.rendaPerfil&&d.rec>0?`<div class="kpi-detail-row"><span>Variação</span><span class="kpi-detail-val" style="color:${d.rec>d.rendaPerfil?'var(--gr)':'var(--am)'}">${d.rec>d.rendaPerfil?'+':''}${fmt(d.rec-d.rendaPerfil)}</span></div>`:''}
+        <div class="kpi-detail-row"><span>Variação</span><span class="kpi-detail-val" style="color:${d.rec>d.rendaPerfil?'var(--gr)':d.rec<d.rendaPerfil?'var(--am)':'var(--t3)'}">${d.rec>d.rendaPerfil?'▲':d.rec<d.rendaPerfil?'▼':'='} ${fmt(Math.abs(d.rec-d.rendaPerfil))}</span></div>
         <div class="kpi-detail-row" style="border-top:1px solid var(--b);margin-top:4px;padding-top:4px">
           <span>Saldo total acum.</span>
           <span class="kpi-detail-val" style="color:${d.saldoTotal>=0?'var(--gr)':'var(--re)'}">${fmt(d.saldoTotal)}</span>
@@ -1415,7 +1465,6 @@ function rVisao(){
           <span class="kpi-detail-val" style="color:var(--ac)">${fmt(d.saldoTotal+d.invTotal)}</span>
         </div>
       </div>
-      <div style="height:14px"></div>
       <div class="kpi-mini-bar"><div class="kpi-mini-fill gr" style="width:${Math.min(100,d.rec/Math.max(d.rendaPerfil,1)*100)}%"></div></div>
     </div>
     <div class="kpi k-re">
@@ -1677,9 +1726,25 @@ function rVisaoGeral(){
   dc('cGeralLinha');
   const ctx=document.getElementById('cGeralLinha')?.getContext('2d');
   if(ctx&&d.hist.length>0){
-    charts['cGeralLinha']=new Chart(ctx,{type:'line',data:{labels:d.hist.map(h=>h.mes),datasets:[
-      {label:'Saldo',data:d.hist.map(h=>h.saldo),borderColor:gc('ac'),backgroundColor:gc('ac')+'18',fill:true,tension:.4,pointBackgroundColor:gc('ac'),pointRadius:4,borderWidth:2},
-    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`Saldo: ${fmt(c.raw)}`}}},scales:{x:{ticks:{color:gc('t2'),font:{size:11}},grid:{color:gc('b')}},y:{ticks:{color:gc('t2'),font:{size:11},callback:v=>'R$'+v.toLocaleString('pt-BR')},grid:{color:gc('b')}}}}});
+    const geralSaldos=d.hist.map(h=>h.saldo);
+    charts['cGeralLinha']=new Chart(ctx,{type:'line',data:{labels:d.hist.map(h=>h.mes),datasets:[{
+      label:'Saldo',data:geralSaldos,
+      segment:{borderColor:(c)=>geralSaldos[c.p1DataIndex]>=0?gc('gr'):gc('re')},
+      borderColor:geralSaldos[geralSaldos.length-1]>=0?gc('gr'):gc('re'),
+      backgroundColor:(ctx2)=>{const g=ctx2.chart.ctx.createLinearGradient(0,0,0,ctx2.chart.height||200);const last=geralSaldos[geralSaldos.length-1]||0;const cor=last>=0?gc('gr'):gc('re');g.addColorStop(0,cor+'44');g.addColorStop(1,cor+'04');return g;},
+      fill:true,tension:.4,
+      pointBackgroundColor:geralSaldos.map(s=>s>=0?gc('gr'):gc('re')),
+      pointBorderColor:'#fff',pointBorderWidth:2,
+      pointRadius:4,pointHoverRadius:6,borderWidth:2,
+      datalabels:{
+        display:true,anchor:(c)=>geralSaldos[c.dataIndex]>=0?'end':'start',align:(c)=>geralSaldos[c.dataIndex]>=0?'top':'bottom',
+        color:(c)=>geralSaldos[c.dataIndex]>=0?gc('gr'):gc('re'),
+        font:{size:10,weight:'700'},
+        formatter:(v)=>{const abs=Math.abs(v);return abs>=1000?'R$'+(v/1000).toFixed(1)+'k':fmt(v);}
+      }
+    }]},options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`Saldo: ${fmt(c.raw)}`}},datalabels:{display:false}},
+      scales:{x:{ticks:{color:gc('t2'),font:{size:11}},grid:{color:gc('b')},border:{display:false}},y:{ticks:{color:gc('t2'),font:{size:11},callback:v=>{const abs=Math.abs(v);return abs>=1000?'R$'+(v/1000).toFixed(0)+'k':fmt(v);}},grid:{color:gc('b')},border:{display:false}}}}});
   }
 }
 
@@ -2017,7 +2082,7 @@ function renderEvolChart(){
       label:'Saldo',data:saldos,
       borderColor:(ctx2)=>{const s=saldos[ctx2.dataIndex||0];return s>=0?gc('gr'):gc('re');},
       segment:{borderColor:(ctx2)=>saldos[ctx2.p1DataIndex]>=0?gc('gr'):gc('re')},
-      backgroundColor:(ctx2)=>{const g=ctx2.chart.ctx.createLinearGradient(0,0,0,200);const pos=saldos.some(s=>s>=0);g.addColorStop(0,(pos?gc('gr'):gc('re'))+'55');g.addColorStop(1,(pos?gc('gr'):gc('re'))+'05');return g;},
+      backgroundColor:(ctx2)=>{const g=ctx2.chart.ctx.createLinearGradient(0,0,0,ctx2.chart.height||200);const last=saldos[saldos.length-1]||0;const cor=last>=0?gc('gr'):gc('re');g.addColorStop(0,cor+'44');g.addColorStop(1,cor+'04');return g;},
       fill:true,tension:.4,
       pointBackgroundColor:saldos.map(s=>s>=0?gc('gr'):gc('re')),
       pointBorderColor:'#fff',pointBorderWidth:2,pointRadius:5,pointHoverRadius:7,borderWidth:2.5,
