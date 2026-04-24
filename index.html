@@ -1298,7 +1298,8 @@ function rPilares(){
   if(ctxR){
     const pl=Object.keys(PM);
     const metaVals=pl.map(p=>100);
-    const realVals=pl.map(p=>{const meta=ref2*PM[p];const real=d.gpp[p]||0;return meta>0?Math.min(130,+(real/meta*100).toFixed(0)):0;});
+    const _ref2=d.rendaPerfil||d.rec||1;
+    const realVals=pl.map(p=>{const meta=_ref2*PM[p];const real=d.gpp[p]||0;return meta>0?Math.min(130,+(real/meta*100).toFixed(0)):0;});
     charts['cRad']=new Chart(ctxR,{type:'radar',data:{labels:pl.map(p=>PI[p]+' '+p),datasets:[
       {label:'Meta (100%)',data:metaVals,borderColor:gc('b2')||gc('b'),backgroundColor:'transparent',borderWidth:1.5,pointRadius:3},
       {label:'Realizado',data:realVals,borderColor:gc('ac'),backgroundColor:gc('ac')+'22',borderWidth:2,pointBackgroundColor:gc('ac'),pointRadius:4},
