@@ -440,6 +440,39 @@ tbody tr:hover td{background:var(--ci)}
 .sum-lbl{font-size:11px;color:var(--t3);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
 .sum-val{font-size:20px;font-weight:700;font-family:var(--mono);letter-spacing:-1px}
 
+/* ══ IMPORTAÇÃO ═════════════════════════════════════════ */
+.imp-zone{border:2px dashed var(--b2);border-radius:var(--r);padding:40px 20px;text-align:center;cursor:pointer;transition:all var(--dur);background:var(--ci)}
+.imp-zone:hover,.imp-zone.drag{border-color:var(--ac);background:var(--ad)}
+.imp-zone-icon{font-size:36px;margin-bottom:10px}
+.imp-zone-title{font-size:15px;font-weight:700;margin-bottom:4px}
+.imp-zone-sub{font-size:12px;color:var(--t2)}
+.imp-progress{margin:16px 0;display:none}
+.imp-bar{height:6px;background:var(--b);border-radius:3px;overflow:hidden;margin-top:6px}
+.imp-bar-fill{height:100%;background:linear-gradient(90deg,var(--ac),var(--ac2));border-radius:3px;transition:width .3s}
+.imp-status{font-size:12px;color:var(--t2);margin-top:4px}
+.imp-preview{background:var(--card);border:1px solid var(--b);border-radius:var(--r);padding:20px;margin-top:16px;display:none}
+.imp-preview-title{font-size:14px;font-weight:700;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+.imp-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.imp-stat{background:var(--ci);border-radius:var(--rs);padding:12px;text-align:center}
+.imp-stat-val{font-size:18px;font-weight:700;font-family:var(--mono)}
+.imp-stat-lbl{font-size:11px;color:var(--t3);margin-top:2px}
+.imp-conflicts{background:var(--amd);border:1px solid rgba(217,119,6,.25);border-radius:var(--rs);padding:14px;margin-bottom:14px;display:none}
+.imp-conflict-title{font-weight:700;font-size:13px;margin-bottom:8px;color:var(--am)}
+.imp-conflict-item{font-size:12px;color:var(--t2);padding:4px 0;border-bottom:1px solid var(--b);display:flex;justify-content:space-between}
+.imp-conflict-item:last-child{border-bottom:none}
+.imp-actions{display:flex;gap:10px}
+.imp-btn-confirm{flex:1;padding:12px;background:var(--ac);color:#fff;border:none;border-radius:var(--rs);font-size:14px;font-weight:700;cursor:pointer;transition:opacity var(--dur)}
+.imp-btn-confirm:hover{opacity:.9}
+.imp-btn-cancel{padding:12px 20px;background:var(--ci);border:1px solid var(--b);color:var(--t2);border-radius:var(--rs);font-size:14px;font-weight:600;cursor:pointer}
+.imp-result{background:var(--gd);border:1px solid rgba(5,150,105,.2);border-radius:var(--rs);padding:14px;text-align:center;display:none}
+.imp-result.erro{background:var(--rd);border-color:rgba(220,38,38,.2)}
+.imp-row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid var(--b)}
+.imp-row:last-child{border-bottom:none}
+.imp-row-desc{color:var(--t2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.imp-row-val{font-family:var(--mono);font-weight:600}
+.imp-row-val.neg{color:var(--re)}.imp-row-val.pos{color:var(--gr)}
+.imp-table-wrap{max-height:300px;overflow-y:auto;margin-bottom:14px}
+
 /* ══ MOBILE ══════════════════════════════════════════════ */
 @media(max-width:768px){
   :root{--sw:0px;--sc:0px}
@@ -528,6 +561,7 @@ tbody tr:hover td{background:var(--ci)}
       <button class="ni" data-tip="Vencimentos"" onclick="nav('venc',this)"><span class="ni-ic">📅</span><span class="nl">Vencimentos</span><span class="nb" id="bv" style="display:none">0</span></button>
       <button class="ni" data-tip="Metas"" onclick="nav('metas',this)"><span class="ni-ic">🎯</span><span class="nl">Metas</span></button>
       <button class="ni" data-tip="Estabelecimentos"" onclick="nav('estab',this)"><span class="ni-ic">🏪</span><span class="nl">Estabelec.</span><span class="nb" id="be" style="display:none">!</span></button>
+      <button class="ni" onclick="nav('import',this)" data-tip="Importar extratos"><span class="ni-ic">📥</span><span class="nl">Importar</span></button>
       <div class="ngl">Inteligência</div>
       <button class="ni" data-tip="Insights IA"" onclick="nav('ins',this)"><span class="ni-ic">🤖</span><span class="nl">Insights IA</span></button>
       <button class="ni" data-tip="Chat IA"" onclick="nav('chat',this)"><span class="ni-ic">💬</span><span class="nl">Chat IA</span></button>
@@ -569,6 +603,73 @@ tbody tr:hover td{background:var(--ci)}
       <div class="sec" id="sec-metas"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
       <div class="sec" id="sec-estab"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
       <div class="sec" id="sec-ins"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+      <div class="sec" id="sec-import">
+        <div style="max-width:680px;margin:0 auto">
+          <!-- Upload zone -->
+          <div class="imp-zone" id="impZone" onclick="document.getElementById('impFileInput').click()" ondragover="impDrag(event,true)" ondragleave="impDrag(event,false)" ondrop="impDrop(event)">
+            <input type="file" id="impFileInput" accept=".csv,.pdf" multiple style="display:none" onchange="impFileSelecionado(this.files)"/>
+            <div class="imp-zone-icon">📥</div>
+            <div class="imp-zone-title">Arraste extratos aqui ou clique para selecionar</div>
+            <div class="imp-zone-sub">Suporte: Nubank PF/PJ (CSV) · Itaú (CSV exportado)<br>Detecta o banco automaticamente pelo nome do arquivo</div>
+          </div>
+
+          <!-- Progress -->
+          <div class="imp-progress" id="impProgress">
+            <div class="imp-status" id="impStatusTxt">Processando...</div>
+            <div class="imp-bar"><div class="imp-bar-fill" id="impBarFill" style="width:0%"></div></div>
+          </div>
+
+          <!-- Preview antes de importar -->
+          <div class="imp-preview" id="impPreview">
+            <div class="imp-preview-title">
+              <span id="impPreviewTitle">Prévia da importação</span>
+              <span id="impBancoTag" style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--ad);color:var(--ac)"></span>
+            </div>
+            <div class="imp-stats">
+              <div class="imp-stat"><div class="imp-stat-val" id="impTotalTr">0</div><div class="imp-stat-lbl">Transações</div></div>
+              <div class="imp-stat"><div class="imp-stat-val" id="impNovas" style="color:var(--gr)">0</div><div class="imp-stat-lbl">Novas</div></div>
+              <div class="imp-stat"><div class="imp-stat-val" id="impDups" style="color:var(--am)">0</div><div class="imp-stat-lbl">Duplicatas</div></div>
+              <div class="imp-stat"><div class="imp-stat-val" id="impPeriodo">—</div><div class="imp-stat-lbl">Período</div></div>
+            </div>
+
+            <!-- Conflitos detectados -->
+            <div class="imp-conflicts" id="impConflicts">
+              <div class="imp-conflict-title">⚠️ Duplicatas detectadas — o que fazer?</div>
+              <div id="impConflictList"></div>
+              <div style="display:flex;gap:8px;margin-top:10px">
+                <button onclick="setDupAction('skip')" id="btnSkip" class="chip active">Ignorar duplicatas</button>
+                <button onclick="setDupAction('replace')" id="btnReplace" class="chip">Substituir existentes</button>
+                <button onclick="setDupAction('import')" id="btnImportAll" class="chip">Importar tudo</button>
+              </div>
+            </div>
+
+            <!-- Lista prévia -->
+            <div style="font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Prévia das transações</div>
+            <div class="imp-table-wrap">
+              <table style="width:100%;border-collapse:collapse">
+                <thead><tr>
+                  <th style="font-size:10px;color:var(--t3);text-align:left;padding:6px 8px;border-bottom:1px solid var(--b)">Descrição</th>
+                  <th style="font-size:10px;color:var(--t3);text-align:left;padding:6px 8px;border-bottom:1px solid var(--b)">Categoria</th>
+                  <th style="font-size:10px;color:var(--t3);text-align:left;padding:6px 8px;border-bottom:1px solid var(--b)">Mês</th>
+                  <th style="font-size:10px;color:var(--t3);text-align:right;padding:6px 8px;border-bottom:1px solid var(--b)">Valor</th>
+                  <th style="font-size:10px;color:var(--t3);text-align:center;padding:6px 8px;border-bottom:1px solid var(--b)">Status</th>
+                </tr></thead>
+                <tbody id="impTableBody"></tbody>
+              </table>
+            </div>
+
+            <div class="imp-actions">
+              <button class="imp-btn-cancel" onclick="impReset()">✕ Cancelar</button>
+              <button class="imp-btn-confirm" id="impConfirmBtn" onclick="impConfirmar()">
+                ✓ Importar para o Sheets
+              </button>
+            </div>
+          </div>
+
+          <!-- Resultado -->
+          <div class="imp-result" id="impResult"></div>
+        </div>
+      </div>
       <div class="sec" id="sec-chat">
         <div class="ch-sh">
           <div class="ch-bx">
@@ -668,7 +769,7 @@ const CATS={Necessidades:['Moradia/Aluguel','Condomínio','Água','Luz','Gás','
 const MEIOS=['Débito','Crédito Nubank','Crédito Itaú','Crédito Bradesco','Crédito Inter','Crédito BB','Crédito Santander','PIX','Dinheiro','TED/DOC','Boleto'];
 const USERS=['Você','Namorada','Irmão'];
 const PP={Necessidades:'pn',Lazer:'pl',Investimento:'pi',Reserva:'pr',Receita:'pi'};
-const PGINFO={visao:['Visão Geral','Resumo financeiro'],pilares:['Pilares','Modelo dos 6 pilares'],venc:['Vencimentos','Contas e cartões'],metas:['Metas','Objetivos financeiros'],estab:['Estabelecimentos','Índice'],ins:['Insights IA','Análise às 03:00'],chat:['Chat IA','Converse sobre finanças']};
+const PGINFO={visao:['Visão Geral','Resumo financeiro'],pilares:['Pilares','Modelo dos 6 pilares'],venc:['Vencimentos','Contas e cartões'],metas:['Metas','Objetivos financeiros'],estab:['Estabelecimentos','Índice'],ins:['Insights IA','Análise às 03:00'],chat:['Chat IA','Converse sobre finanças'],import:['Importar Extratos','Nubank PF/PJ · Itaú']};
 const BANKS=[{id:'nubank',nm:'Nubank',em:'💜',fc:28,vc:10,cr:'Crédito Nubank'},{id:'itau',nm:'Itaú',em:'🟠',fc:20,vc:27,cr:'Crédito Itaú'},{id:'bradesco',nm:'Bradesco',em:'🔴',fc:15,vc:22,cr:'Crédito Bradesco'},{id:'inter',nm:'Inter',em:'🟡',fc:7,vc:14,cr:'Crédito Inter'},{id:'bb',nm:'Banco do Brasil',em:'🟡',fc:5,vc:12,cr:'Crédito BB'},{id:'santander',nm:'Santander',em:'🔴',fc:10,vc:17,cr:'Crédito Santander'},{id:'xp',nm:'XP',em:'⚫',fc:15,vc:22,cr:'Crédito XP'},{id:'c6',nm:'C6 Bank',em:'⬛',fc:3,vc:10,cr:'Crédito C6'},{id:'outro',nm:'Outro',em:'🏦',fc:15,vc:22,cr:'Débito'}];
 
 let CFG={sheetId:ls('fin_sheetId')||'',scriptUrl:ls('fin_scriptUrl')||'',secret:ls('fin_secret')||'',userName:ls('fin_userName')||'Você'};
@@ -1991,6 +2092,327 @@ function rEstab(){
   if(d.naoMap.length>0){html+=`<div class="ea">⚠️ <strong>${d.naoMap.length} estabelecimento(s)</strong> para mapear na aba Estabelecimentos do Sheets</div>`;}
   html+=`<div class="cc" style="padding:0"><div style="padding:16px 20px"><div class="cc-ti">Todos os estabelecimentos (${d.eArr.length})</div></div><div class="tw"><table><thead><tr><th>Estabelecimento</th><th>Pilar</th><th>Categoria</th><th>Aparições</th><th>Status</th></tr></thead><tbody>${d.eArr.map(e=>`<tr><td>${e.amigavel||e.nome}</td><td><span class="pill ${PP[e.pilar]||'pe'}">${e.pilar}</span></td><td style="color:var(--t2)">${e.cat}</td><td style="font-family:var(--mono);color:var(--t3)">${e.vezes}x</td><td><span class="pill ${e.mapeado==='Sim'?'pi':'pe'}">${e.mapeado==='Sim'?'✓ Mapeado':'Mapear'}</span></td></tr>`).join('')}</tbody></table></div></div>`;
   document.getElementById('sec-estab').innerHTML=html;
+}
+
+// ══ ENGINE DE IMPORTAÇÃO ════════════════════════════════════
+// Índice de classificação automática — expandido com os extratos reais
+const IMP_INDEX = {
+  // Delivery
+  'ifd*':'Lazer|Delivery','ifood':'Lazer|Delivery','rappi':'Lazer|Delivery',
+  '99food':'Lazer|Delivery','james':'Lazer|Delivery','dl*uber':'Lazer|Delivery',
+  'dl *uber':'Lazer|Delivery','ifd *fgsl':'Lazer|Delivery','ifd *p g':'Lazer|Delivery',
+  // Restaurantes
+  'restaurante':'Lazer|Restaurantes','grill':'Lazer|Restaurantes',
+  'pizz':'Lazer|Restaurantes','burger':'Lazer|Restaurantes','lanche':'Lazer|Restaurantes',
+  'sushi':'Lazer|Restaurantes','poke':'Lazer|Restaurantes','brigadeiro':'Lazer|Restaurantes',
+  'kebab':'Lazer|Restaurantes','temperos':'Lazer|Restaurantes','sollare':'Lazer|Restaurantes',
+  'dengochocolatessa':'Lazer|Restaurantes','sal e brasa':'Lazer|Restaurantes',
+  'guaiamumgigante':'Lazer|Restaurantes','hirpina':'Lazer|Restaurantes',
+  'no terraco':'Lazer|Restaurantes','panif nova armada':'Lazer|Restaurantes',
+  'moustache':'Lazer|Restaurantes','esquina da picanha':'Lazer|Restaurantes',
+  'madalena paes':'Lazer|Restaurantes','sorveteria':'Lazer|Restaurantes',
+  'casa forte':'Lazer|Restaurantes','palato':'Lazer|Restaurantes',
+  'entre amigos':'Lazer|Restaurantes','emporio muro alto':'Lazer|Restaurantes',
+  'recanto paraibano':'Lazer|Restaurantes','arcos dourados':'Lazer|Restaurantes',
+  'baker burgue':'Lazer|Restaurantes','rp3':'Lazer|Restaurantes',
+  'sabores':'Lazer|Restaurantes','zae recife':'Lazer|Restaurantes',
+  // Bares/Entretenimento
+  'obar':'Lazer|Bares/Baladas','bebida':'Lazer|Bares/Baladas',
+  'cinema':'Lazer|Bares/Baladas','cinemark':'Lazer|Bares/Baladas',
+  'uniticket':'Lazer|Bares/Baladas','salve bebida':'Lazer|Bares/Baladas',
+  // Mercado
+  'mercado':'Necessidades|Supermercado','carrefour':'Necessidades|Supermercado',
+  'atacadao':'Necessidades|Supermercado','pernambucano':'Necessidades|Supermercado',
+  'recibom':'Necessidades|Supermercado','superm':'Necessidades|Supermercado',
+  'maralco':'Necessidades|Supermercado','mix mateus':'Necessidades|Supermercado',
+  'supermercado':'Necessidades|Supermercado',
+  // Transporte
+  'uber':'Necessidades|Transporte','mobilidade recife park':'Necessidades|Transporte',
+  'recife park':'Necessidades|Transporte','urban parking':'Necessidades|Transporte',
+  'ferreira autom':'Necessidades|Transporte','guedes auto service':'Necessidades|Transporte',
+  // Combustível
+  'posto':'Necessidades|Combustível','cemopel':'Necessidades|Combustível',
+  'petroshop':'Necessidades|Combustível','gasolina':'Necessidades|Combustível',
+  // Farmácia
+  'drogasil':'Necessidades|Farmácia','farmacia':'Necessidades|Farmácia',
+  'rd saude':'Necessidades|Farmácia','raia':'Necessidades|Farmácia',
+  // Pet
+  'petz':'Necessidades|Outros','pet fleming':'Necessidades|Outros',
+  // Saúde
+  'plantao veterinario':'Necessidades|Médico','veterinario':'Necessidades|Médico',
+  // MBA/Educação
+  'xperiun':'Metas|Meta: Educação','vindi':'Metas|Meta: Educação',
+  // Streaming
+  'netflix':'Lazer|Streaming','spotify':'Lazer|Streaming','amazon':'Lazer|Streaming',
+  'disney':'Lazer|Streaming','cartpanda':'Lazer|Streaming','google bras':'Lazer|Streaming',
+  // Celular
+  'tim ':'Necessidades|Celular','tim s':'Necessidades|Celular',
+  'claro':'Necessidades|Internet','google play':'Lazer|Streaming',
+  // Energia
+  'neoenergia':'Necessidades|Luz',
+  // Condomínio
+  'mario n':'Necessidades|Condomínio','mário n':'Necessidades|Condomínio',
+  // Vestuário/Hobbies
+  'cea ':'Lazer|Hobbies','outlet':'Lazer|Hobbies','calcados':'Lazer|Hobbies',
+  'siganina':'Lazer|Hobbies','oh boy':'Lazer|Hobbies','cheval':'Lazer|Hobbies',
+  'barbearia':'Lazer|Hobbies',
+  // Academia
+  'totalpass':'Lazer|Academia',
+  // Airbnb
+  'airbnb':'Lazer|Viagens',
+  // Santander
+  'santander':'Necessidades|Moradia/Aluguel',
+  // Seguro
+  'seguro cartao':'Necessidades|Outros',
+  // Presentes
+  'floricu':'Doações|Presente','atacado dos pres':'Doações|Presente',
+  // Outros fixos
+  'htm*datamundo':'Necessidades|Internet','dinamicasolucoes':'Necessidades|Internet',
+  'eliane maria':'Necessidades|Outros','rayanne':'Necessidades|Outros',
+  'luciano':'Necessidades|Outros','mp *talis':'Necessidades|Outros',
+  'adf domingos':'Necessidades|Outros','pagar me':'Necessidades|Outros',
+};
+
+function impClassificar(titulo){
+  const t=titulo.toLowerCase();
+  for(const [k,v] of Object.entries(IMP_INDEX)){
+    if(t.includes(k)){const[p,c]=v.split('|');return{pilar:p,cat:c};}
+  }
+  return{pilar:'Necessidades',cat:'A classificar'};
+}
+
+// Detectar parcela no título
+function impDetectarParcela(titulo){
+  const m=titulo.match(/[-\s]*(?:parcela\s*)?(\d+)\/(\d+)/i);
+  if(m) return{titulo:titulo.replace(m[0],'').trim(),atual:parseInt(m[1]),total:parseInt(m[2])};
+  return{titulo,atual:null,total:null};
+}
+
+// Calcular mês da fatura Nubank (fecha dia 28)
+function impMesFatura(dataStr,fechDia=28){
+  const d=new Date(dataStr+'T12:00:00');
+  const mc=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  if(d.getDate()<=fechDia){
+    const prox=new Date(d.getFullYear(),d.getMonth()+1,1);
+    return mc[prox.getMonth()]+'/'+prox.getFullYear();
+  } else {
+    const dois=new Date(d.getFullYear(),d.getMonth()+2,1);
+    return mc[dois.getMonth()]+'/'+dois.getFullYear();
+  }
+}
+
+// Ignorar transações internas
+function impDeveIgnorar(titulo, valor){
+  const t=titulo.toLowerCase();
+  const internos=['gabriel cintra de santana','pagamento recebido','saldo em atraso',
+    'parcelamento de fatura','pagamento de fatura','rend pago aplic'];
+  if(internos.some(i=>t.includes(i))) return true;
+  if(valor<0) return true; // crédito/pagamento de fatura
+  return false;
+}
+
+// Detectar banco pelo nome do arquivo
+function impDetectarBanco(nomeArquivo){
+  const n=nomeArquivo.toLowerCase();
+  if(n.includes('[pf]')||n.includes('_pf_')) return{banco:'Nubank PF',meio:'Crédito Nubank PF',tipo:'nubank',fech:28};
+  if(n.includes('[pj]')||n.includes('_pj_')) return{banco:'Nubank PJ',meio:'Crédito Nubank PJ',tipo:'nubank',fech:28};
+  if(n.includes('itau')||n.includes('itaú')) return{banco:'Itaú',meio:'Débito',tipo:'itau',fech:0};
+  return{banco:'Desconhecido',meio:'Débito',tipo:'nubank',fech:28};
+}
+
+// Parse CSV Nubank
+function impParseNubank(csvText,bancoCfg){
+  const lines=csvText.trim().split('\n').filter(l=>l.trim());
+  const inicio=lines[0].toLowerCase().includes('date')?1:0;
+  const rows=[];
+  for(let i=inicio;i<lines.length;i++){
+    const cols=lines[i].split(',').map(c=>c.replace(/"/g,'').trim());
+    if(cols.length<3) continue;
+    const data=cols[0],titulo=cols[1],valor=parseFloat(cols[2]);
+    if(!data||!titulo||isNaN(valor)) continue;
+    if(impDeveIgnorar(titulo,valor)) continue;
+    const {titulo:tLimpo,atual,total}=impDetectarParcela(titulo);
+    const cls=impClassificar(titulo);
+    const mes=impMesFatura(data,bancoCfg.fech);
+    const d=new Date(data+'T12:00:00');
+    rows.push({
+      data:d.toLocaleDateString('pt-BR'),
+      desc:tLimpo,
+      valor:-Math.abs(valor),
+      tipo:'Despesa',pilar:cls.pilar,cat:cls.cat,
+      meio:bancoCfg.meio,banco:bancoCfg.banco,
+      mes,obs:atual?`Parcela ${atual}/${total}`:'',
+    });
+  }
+  return rows;
+}
+
+// Estado da importação
+let _impDados=[];
+let _impDupAction='skip';
+let _impExistentes=[];
+
+function impDrag(e,over){e.preventDefault();document.getElementById('impZone').classList.toggle('drag',over);}
+function impDrop(e){e.preventDefault();document.getElementById('impZone').classList.remove('drag');impFileSelecionado(e.dataTransfer.files);}
+
+async function impFileSelecionado(files){
+  if(!files||!files.length) return;
+  impShowProgress(true,'Lendo arquivo...',10);
+  _impDados=[];
+  
+  for(let i=0;i<files.length;i++){
+    const file=files[i];
+    const bancoCfg=impDetectarBanco(file.name);
+    impShowProgress(true,`Processando ${file.name}...`,20+i*20);
+    
+    const text=await file.text();
+    let rows=[];
+    if(bancoCfg.tipo==='nubank') rows=impParseNubank(text,bancoCfg);
+    else rows=[]; // Itaú CSV futuro
+    _impDados.push(...rows);
+  }
+
+  impShowProgress(true,'Verificando duplicatas...',80);
+  
+  // Buscar transações existentes do Sheets para deduplicar
+  await impVerificarDuplicatas();
+  impShowProgress(false,'',100);
+  impMostrarPreview();
+}
+
+async function impVerificarDuplicatas(){
+  try{
+    const aba=await buscarAba('Transações');
+    _impExistentes=aba.slice(1).filter(r=>r[0]&&r[2]).map(r=>({
+      data:r[0]?.toString().trim(),
+      desc:(r[1]||'').toLowerCase().trim(),
+      valor:Math.abs(parseFloat((r[2]||'0').toString().replace(',','.'))||0),
+      mes:(r[9]||'').toString().trim(),
+    }));
+  }catch{_impExistentes=[];}
+  
+  // Marcar duplicatas
+  _impDados.forEach(row=>{
+    const isDup=_impExistentes.some(ex=>{
+      const descMatch=ex.desc.includes(row.desc.toLowerCase().substring(0,8))||
+                       row.desc.toLowerCase().includes(ex.desc.substring(0,8));
+      const valMatch=Math.abs(Math.abs(row.valor)-ex.valor)<0.02;
+      const mesMatch=ex.mes===row.mes||ex.data?.includes(row.data?.split('/')[0]);
+      return descMatch&&valMatch&&mesMatch;
+    });
+    row.isDup=isDup;
+  });
+}
+
+function setDupAction(action){
+  _impDupAction=action;
+  ['skip','replace','import'].forEach(a=>{
+    document.getElementById('btn'+a.charAt(0).toUpperCase()+a.slice(1))?.classList.toggle('active',a===action);
+  });
+  impMostrarPreview();
+}
+
+function impMostrarPreview(){
+  const novas=_impDados.filter(r=>!r.isDup);
+  const dups=_impDados.filter(r=>r.isDup);
+  
+  document.getElementById('impTotalTr').textContent=_impDados.length;
+  document.getElementById('impNovas').textContent=novas.length;
+  document.getElementById('impDups').textContent=dups.length;
+  
+  // Período
+  const datas=_impDados.map(r=>r.data).filter(Boolean);
+  const meses=[...new Set(_impDados.map(r=>r.mes))];
+  document.getElementById('impPeriodo').textContent=meses.join(', ');
+  
+  // Banco tag
+  const bancos=[...new Set(_impDados.map(r=>r.banco))];
+  document.getElementById('impBancoTag').textContent=bancos.join(' + ');
+  
+  // Conflitos
+  const confEl=document.getElementById('impConflicts');
+  if(dups.length>0){
+    confEl.style.display='block';
+    document.getElementById('impConflictList').innerHTML=dups.slice(0,8).map(d=>
+      `<div class="imp-conflict-item"><span>${d.desc.substring(0,30)}</span><span style="color:var(--am);font-family:var(--mono)">${fmt(Math.abs(d.valor))} · ${d.mes}</span></div>`
+    ).join('')+(dups.length>8?`<div style="color:var(--t3);font-size:11px;margin-top:4px">+${dups.length-8} mais...</div>`:'');
+  } else confEl.style.display='none';
+
+  // Tabela preview
+  const paraImportar=_impDupAction==='skip'?novas:_impDados;
+  document.getElementById('impTableBody').innerHTML=paraImportar.slice(0,30).map(r=>`<tr>
+    <td style="padding:6px 8px;font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t);border-bottom:1px solid var(--b)">${r.desc}</td>
+    <td style="padding:6px 8px;font-size:11px;color:var(--t2);border-bottom:1px solid var(--b)"><span class="pill pn">${r.cat}</span></td>
+    <td style="padding:6px 8px;font-size:11px;color:var(--t3);border-bottom:1px solid var(--b)">${r.mes}</td>
+    <td style="padding:6px 8px;font-size:12px;font-family:var(--mono);font-weight:600;text-align:right;color:var(--re);border-bottom:1px solid var(--b)">${fmt(Math.abs(r.valor))}</td>
+    <td style="padding:6px 8px;text-align:center;border-bottom:1px solid var(--b)">${r.isDup?'<span style="font-size:10px;color:var(--am)">⚠️ dup</span>':'<span style="font-size:10px;color:var(--gr)">✓ nova</span>'}</td>
+  </tr>`).join('')+(paraImportar.length>30?`<tr><td colspan="5" style="padding:8px;text-align:center;font-size:11px;color:var(--t3)">+${paraImportar.length-30} transações não exibidas</td></tr>`:'');
+  
+  // Atualizar botão
+  const paraImportarCount=paraImportar.length;
+  document.getElementById('impConfirmBtn').textContent=`✓ Importar ${paraImportarCount} transações para o Sheets`;
+  
+  document.getElementById('impPreview').style.display='block';
+}
+
+async function impConfirmar(){
+  const paraImportar=_impDupAction==='skip'?_impDados.filter(r=>!r.isDup):_impDados;
+  if(!paraImportar.length){impReset();return;}
+  
+  document.getElementById('impConfirmBtn').textContent='Enviando...';
+  document.getElementById('impConfirmBtn').disabled=true;
+  impShowProgress(true,'Enviando para o Sheets...',50);
+
+  try{
+    // Enviar em lotes de 50 para não estourar o Apps Script
+    const lotes=[];
+    for(let i=0;i<paraImportar.length;i+=50) lotes.push(paraImportar.slice(i,i+50));
+    
+    let enviados=0;
+    for(const lote of lotes){
+      const payload={
+        acao:'importarTransacoes',
+        secret:CFG.secret,
+        sheetId:CFG.sheetId,
+        transacoes:lote,
+        substituir:_impDupAction==='replace',
+      };
+      await chamarScript('importarTransacoes',payload);
+      enviados+=lote.length;
+      impShowProgress(true,`Enviando... ${enviados}/${paraImportar.length}`,50+enviados/paraImportar.length*50);
+    }
+
+    impShowProgress(false,'',100);
+    document.getElementById('impPreview').style.display='none';
+    const res=document.getElementById('impResult');
+    res.style.display='block';
+    res.className='imp-result';
+    res.innerHTML=`<div style="font-size:24px;margin-bottom:8px">✅</div><div style="font-size:15px;font-weight:700">${paraImportar.length} transações importadas!</div><div style="font-size:13px;color:var(--gr);margin-top:4px">Dados atualizados no Sheets</div><button onclick="impReset();limparCache();carregarDados();" style="margin-top:12px;padding:9px 20px;background:var(--ac);color:#fff;border:none;border-radius:var(--rs);font-size:13px;font-weight:700;cursor:pointer">Ver no dashboard →</button>`;
+  }catch(e){
+    impShowProgress(false,'',0);
+    const res=document.getElementById('impResult');
+    res.style.display='block';res.className='imp-result erro';
+    res.innerHTML=`⚠️ Erro ao importar: ${e.message}`;
+    document.getElementById('impConfirmBtn').disabled=false;
+    document.getElementById('impConfirmBtn').textContent='Tentar novamente';
+  }
+}
+
+function impShowProgress(show,txt,pct){
+  const el=document.getElementById('impProgress');
+  if(el) el.style.display=show?'block':'none';
+  const tEl=document.getElementById('impStatusTxt');
+  if(tEl) tEl.textContent=txt;
+  const bEl=document.getElementById('impBarFill');
+  if(bEl) bEl.style.width=pct+'%';
+}
+
+function impReset(){
+  _impDados=[];_impExistentes=[];_impDupAction='skip';
+  document.getElementById('impFileInput').value='';
+  document.getElementById('impPreview').style.display='none';
+  document.getElementById('impResult').style.display='none';
+  impShowProgress(false,'',0);
 }
 
 // ══ POPUP SALÁRIO ═══════════════════════════════════════════
