@@ -133,33 +133,33 @@ input,select,textarea{font-family:var(--font)}
 .sidebar{width:var(--sw);background:var(--sb);border-right:1px solid var(--b);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:width var(--dur) var(--ease);overflow:hidden}
 .sidebar.collapsed{width:var(--sc)}
 .sidebar.collapsed .nl,.sidebar.collapsed .sw,.sidebar.collapsed .ngl,.sidebar.collapsed .sui{opacity:0;pointer-events:none;width:0;overflow:hidden}
-.sb-hd{padding:20px 16px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.sb-hd{padding:14px 16px 8px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .sb-br{display:flex;align-items:center;gap:10px}
 .sb-li{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--ac),var(--ac2));display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;box-shadow:0 4px 12px rgba(79,70,229,.3)}
 .sw{font-size:17px;font-weight:700;letter-spacing:-.4px;white-space:nowrap;transition:opacity var(--dur)}
 .cb{width:28px;height:28px;border-radius:8px;background:var(--ci);border:1px solid var(--b);color:var(--t2);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;transition:all var(--dur)}
 .cb:hover{background:var(--ad);color:var(--ac);border-color:var(--ac)}
-.sb-nav{flex:1;padding:8px 10px;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+.sb-nav{flex:1;padding:6px 10px;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
 .sb-nav::-webkit-scrollbar{display:none}
-.ngl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--t3);padding:12px 8px 6px;white-space:nowrap;transition:opacity var(--dur)}
-.ni{display:flex;align-items:center;gap:10px;padding:10px;border-radius:var(--rx);color:var(--t2);border:none;background:none;width:100%;text-align:left;white-space:nowrap;position:relative;transition:all var(--dur);margin-bottom:2px}
+.ngl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--t3);padding:8px 8px 4px;white-space:nowrap;transition:opacity var(--dur)}
+.ni{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:var(--rx);color:var(--t2);border:none;background:none;width:100%;text-align:left;white-space:nowrap;position:relative;transition:all var(--dur);margin-bottom:1px}
 .ni:hover{background:var(--ad);color:var(--ac)}
 .ni.active{background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;box-shadow:0 4px 12px rgba(79,70,229,.25)}
-.ni-ic{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;transition:all var(--dur)}
+.ni-ic{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;transition:all var(--dur)}
 .ni.active .ni-ic{background:rgba(255,255,255,.2)}
 .ni:not(.active):hover .ni-ic{background:var(--ad)}
 .nl{font-size:14px;font-weight:500;white-space:nowrap;transition:opacity var(--dur)}
 .nb{margin-left:auto;background:var(--re);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:20px;flex-shrink:0}
 .ni.active .nb{background:rgba(255,255,255,.3)}
-.sb-ft{padding:10px;border-top:1px solid var(--b);flex-shrink:0}
-.sui{display:flex;align-items:center;gap:10px;padding:10px;border-radius:var(--rx);cursor:pointer;transition:background var(--dur)}
+.sb-ft{padding:6px 10px 8px;border-top:1px solid var(--b);flex-shrink:0}
+.sui{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--rx);cursor:pointer;transition:background var(--dur)}
 .sui:hover{background:var(--ci)}
 .u-av{width:36px;height:36px;border-radius:10px;flex-shrink:0;background:linear-gradient(135deg,#F59E0B,#EF4444);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff}
 .u-nm{font-size:13px;font-weight:600;white-space:nowrap}
 .u-rl{font-size:11px;color:var(--t3);white-space:nowrap}
-.th-btn{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--rx);background:var(--ci);border:1px solid var(--b);color:var(--t2);width:100%;margin-bottom:6px;font-size:13px;transition:all var(--dur)}
+.th-btn{display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:var(--rx);background:var(--ci);border:1px solid var(--b);color:var(--t2);width:100%;margin-bottom:4px;font-size:12px;transition:all var(--dur)}
 .th-btn:hover{border-color:var(--ac);color:var(--ac)}
-.th-ic{width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.th-ic{width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
 
 /* ══ TOPBAR ══════════════════════════════════════════════ */
 .mw{flex:1;margin-left:var(--sw);transition:margin-left var(--dur) var(--ease);display:flex;flex-direction:column;min-height:100dvh}
@@ -390,6 +390,14 @@ tbody tr:hover td{background:var(--ci)}
 .m-sv:active{opacity:.85}
 .m-ok{background:var(--gd);border:1px solid rgba(5,150,105,.25);color:var(--gr);padding:12px;border-radius:var(--rx);text-align:center;font-weight:700;display:none;margin-top:10px}
 
+/* ══ POPUP SALÁRIO ═══════════════════════════════════════ */
+.salary-popup{position:fixed;bottom:80px;right:20px;z-index:300;background:var(--card);border:1px solid var(--b2);border-radius:var(--r);padding:16px 18px;max-width:280px;box-shadow:var(--shm);animation:slideUp .3s var(--ease)}
+.salary-popup.hidden{display:none}
+.sp-title{font-size:14px;font-weight:700;margin-bottom:4px}
+.sp-sub{font-size:12px;color:var(--t2);margin-bottom:12px;line-height:1.4}
+.sp-btns{display:flex;gap:8px}
+.sp-yes{flex:1;padding:8px;border-radius:var(--rx);background:var(--ac);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer}
+.sp-no{flex:1;padding:8px;border-radius:var(--rx);background:var(--ci);border:1px solid var(--b);color:var(--t2);font-size:13px;font-weight:600;cursor:pointer}
 /* ══ MISC ════════════════════════════════════════════════ */
 .sl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--t3);margin:20px 0 12px}
 .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px;gap:14px;color:var(--t3)}
@@ -441,6 +449,7 @@ tbody tr:hover td{background:var(--ci)}
         <div class="ob-step" id="obst-2"></div>
         <div class="ob-step" id="obst-3"></div>
         <div class="ob-step" id="obst-4"></div>
+        <div class="ob-step" id="obst-5"></div>
       </div>
       <div class="ob-eyebrow" id="ob-eyebrow">Passo 1 de 5</div>
       <div class="ob-title" id="ob-title">Sua renda mensal</div>
@@ -552,6 +561,15 @@ tbody tr:hover td{background:var(--ci)}
 </div>
 
 <div class="cal-tooltip" id="calTooltip"></div>
+<!-- POPUP CONFIRMAÇÃO SALÁRIO -->
+<div class="salary-popup hidden" id="salaryPopup">
+  <div class="sp-title">💰 Dia do salário!</div>
+  <div class="sp-sub" id="spSub">Você recebeu seu salário hoje?</div>
+  <div class="sp-btns">
+    <button class="sp-yes" onclick="confirmarSalario(true)">✅ Sim, recebi</button>
+    <button class="sp-no" onclick="confirmarSalario(false)">Ainda não</button>
+  </div>
+</div>
 <button class="fab" onclick="abrirModal()"><svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></button>
 
 <!-- MODAL -->
@@ -608,7 +626,7 @@ const BANKS=[{id:'nubank',nm:'Nubank',em:'💜',fc:28,vc:10,cr:'Crédito Nubank'
 
 let CFG={sheetId:ls('fin_sheetId')||'',scriptUrl:ls('fin_scriptUrl')||'',secret:ls('fin_secret')||'',userName:ls('fin_userName')||'Você'};
 let ST={mesIdx:new Date().getMonth(),ano:new Date().getFullYear(),dados:null,sbCol:ls('fin_sb')==='1'};
-let OB={step:0,renda:{tipo:'fixa',valor:'',dia:''},bancos:[],despesas:[],investimentos:[]};
+let OB={step:0,renda:{tipo:'fixa',valor:ls('fin_renda')||'',dia:'1'},bancos:[],despesas:[],investimentos:[],metas:[]};
 let tipoM='gasto',charts={};
 
 function ls(k){try{return localStorage.getItem(k);}catch{return null;}}
@@ -661,11 +679,12 @@ function salvarCfg(){CFG.sheetId=document.getElementById('iSh').value.trim();CFG
 
 // ══ ONBOARDING ════════════════════════════════════════════════
 const OB_STEPS=[
-  {ey:'Passo 1 de 5',ti:'Sua renda mensal',su:'Informe sua renda para que o modelo dos 6 pilares seja calculado corretamente.'},
-  {ey:'Passo 2 de 5',ti:'Seus bancos e cartões',su:'Selecione os bancos que você usa. Configure fechamento e vencimento de cada cartão.'},
-  {ey:'Passo 3 de 5',ti:'Despesas fora do cartão',su:'Boletos, empréstimos, carnês e gastos fixos que não entram no cartão de crédito.'},
-  {ey:'Passo 4 de 5',ti:'Investimentos',su:'Informe onde seu dinheiro está investido para que a IA considere no planejamento.'},
-  {ey:'Passo 5 de 5',ti:'Confirmar perfil',su:'Revise suas informações. Você pode editar depois em "Editar perfil" no menu lateral.'},
+  {ey:'Passo 1 de 6',ti:'Sua renda mensal',su:'Informe sua renda para que o modelo dos 6 pilares seja calculado corretamente.'},
+  {ey:'Passo 2 de 6',ti:'Seus bancos e cartões',su:'Selecione os bancos que você usa. Configure fechamento e vencimento de cada cartão.'},
+  {ey:'Passo 3 de 6',ti:'Despesas fora do cartão',su:'Boletos, empréstimos, carnês e gastos fixos que não entram no cartão de crédito.'},
+  {ey:'Passo 4 de 6',ti:'Investimentos',su:'Informe onde seu dinheiro está investido para que a IA considere no planejamento.'},
+  {ey:'Passo 5 de 6',ti:'Metas financeiras',su:'Defina seus objetivos. A IA vai avaliar se o ritmo está bom e sugerir ajustes.'},
+  {ey:'Passo 6 de 6',ti:'Confirmar perfil',su:'Revise suas informações. Você pode editar depois em "Editar perfil" no menu lateral.'},
 ];
 
 function abrirOnboarding(){
@@ -674,6 +693,7 @@ function abrirOnboarding(){
   try{const bs=JSON.parse(ls('fin_bancos')||'[]');OB.bancos=bs;}catch{}
   try{const ds=JSON.parse(ls('fin_despesas')||'[]');OB.despesas=ds;}catch{}
   try{const is=JSON.parse(ls('fin_inv')||'[]');OB.investimentos=is;}catch{}
+  try{const ms=JSON.parse(ls('fin_metas_ob')||'[]');OB.metas=ms;}catch{}
   document.getElementById('obOv').classList.remove('hidden');
   obRender();
 }
@@ -695,7 +715,8 @@ function obRender(){
   else if(s===1) body.innerHTML=obStep1();
   else if(s===2) body.innerHTML=obStep2();
   else if(s===3) body.innerHTML=obStep3();
-  else body.innerHTML=obStep4();
+  else if(s===4) body.innerHTML=obStep4Metas();
+  else body.innerHTML=obStep5Resumo();
 }
 
 function obStep0(){
@@ -834,7 +855,7 @@ function obStep3(){
 function addInv(){OB.investimentos.push({tipo:'Tesouro Direto',inst:'',valor:0,rend:12});obRender();}
 function remInv(i){OB.investimentos.splice(i,1);obRender();}
 
-function obStep4(){
+function obStep5Resumo(){
   const totalInv=OB.investimentos.reduce((s,i)=>s+(i.valor||0),0);
   const totalDesp=OB.despesas.reduce((s,d)=>s+(d.valor||0),0);
   let html=`
@@ -861,9 +882,72 @@ function obStep4(){
     ${OB.investimentos.map(i=>`<div class="resumo-row"><span>${i.tipo} · ${i.inst||'-'}</span><span class="resumo-val" style="color:var(--gr)">${fmt(i.valor||0)} · ${i.rend||0}%a.a.</span></div>`).join('')}
     ${OB.investimentos.length===0?'<div style="color:var(--t3);font-size:13px">Nenhum investimento cadastrado</div>':''}
     ${totalInv>0?`<div class="resumo-row"><strong>Patrimônio total</strong><span class="resumo-val" style="color:var(--gr)">${fmt(totalInv)}</span></div>`:''}
+  </div>
+  <div class="resumo-section">
+    <div class="resumo-title">🎯 Metas (${OB.metas.length})</div>
+    ${OB.metas.map(m=>{
+      const pct=m.total>0?((m.guardado||0)/m.total*100).toFixed(0):0;
+      const meses=m.aporte>0?Math.ceil(((m.total||0)-(m.guardado||0))/m.aporte):'?';
+      return`<div class="resumo-row"><span>${m.nome||'Meta'}</span><span class="resumo-val">${fmt(m.guardado||0)} / ${fmt(m.total||0)} · ${pct}% · ~${meses}m · ${fmt(m.aporte||0)}/mês</span></div>`;
+    }).join('')}
+    ${OB.metas.length===0?'<div style="color:var(--t3);font-size:13px">Nenhuma meta cadastrada</div>':''}
   </div>`;
   return html;
 }
+
+function obStep4Metas(){
+  let html='';
+  (OB.metas||[]).forEach((m,i)=>{
+    const pct=m.total>0&&m.guardado>0?((m.guardado/m.total)*100).toFixed(0):0;
+    html+=`<div class="desp-item">
+      <div class="desp-item-title">${m.nome||'Meta '+(i+1)}<button class="desp-remove" onclick="remMeta(${i})">×</button></div>
+      <div class="ob-grid2">
+        <div class="ob-field"><label class="ob-label">Nome da meta</label>
+          <input class="ob-input" type="text" placeholder="Ex: Reserva emergência, Viagem..." value="${m.nome||''}" oninput="OB.metas[${i}].nome=this.value"/>
+        </div>
+        <div class="ob-field"><label class="ob-label">Prioridade</label>
+          <select class="ob-select" onchange="OB.metas[${i}].prioridade=this.value">
+            <option value="Alta" ${m.prioridade==='Alta'?'selected':''}>🔴 Alta</option>
+            <option value="Média" ${m.prioridade==='Média'||!m.prioridade?'selected':''}>🟡 Média</option>
+            <option value="Baixa" ${m.prioridade==='Baixa'?'selected':''}>🟢 Baixa</option>
+          </select>
+        </div>
+      </div>
+      <div class="ob-grid3">
+        <div class="ob-field"><label class="ob-label">Valor total (R$)</label>
+          <input class="ob-input" type="number" step="0.01" placeholder="Ex: 30000" value="${m.total||''}" oninput="OB.metas[${i}].total=parseFloat(this.value)||0"/>
+        </div>
+        <div class="ob-field"><label class="ob-label">Já guardado (R$)</label>
+          <input class="ob-input" type="number" step="0.01" placeholder="Ex: 5000" value="${m.guardado||''}" oninput="OB.metas[${i}].guardado=parseFloat(this.value)||0"/>
+        </div>
+        <div class="ob-field"><label class="ob-label">Aporte mensal (R$)</label>
+          <input class="ob-input" type="number" step="0.01" placeholder="Ex: 500" value="${m.aporte||''}" oninput="OB.metas[${i}].aporte=parseFloat(this.value)||0"/>
+        </div>
+      </div>
+      <div class="ob-grid2">
+        <div class="ob-field"><label class="ob-label">Prazo desejado</label>
+          <input class="ob-input" type="text" placeholder="Ex: 12 meses, Dez/2026" value="${m.prazo||''}" oninput="OB.metas[${i}].prazo=this.value"/>
+        </div>
+        <div class="ob-field"><label class="ob-label">Onde guardar</label>
+          <select class="ob-select" onchange="OB.metas[${i}].onde=this.value">
+            <option value="Tesouro Selic" ${m.onde==='Tesouro Selic'?'selected':''}>Tesouro Selic</option>
+            <option value="CDB" ${m.onde==='CDB'?'selected':''}>CDB</option>
+            <option value="Poupança" ${m.onde==='Poupança'?'selected':''}>Poupança</option>
+            <option value="Conta corrente" ${m.onde==='Conta corrente'?'selected':''}>Conta corrente</option>
+            <option value="Outro" ${m.onde==='Outro'||!m.onde?'selected':''}>Outro</option>
+          </select>
+        </div>
+      </div>
+      ${m.total>0&&m.aporte>0?`<div style="background:var(--ad);border-radius:var(--rx);padding:8px 12px;font-size:12px;color:var(--ac);margin-top:4px">
+        📊 ${pct}% concluído · ~${m.aporte>0?Math.ceil(((m.total||0)-(m.guardado||0))/m.aporte):'?'} meses restantes com este aporte
+      </div>`:''}
+    </div>`;
+  });
+  html+=`<button class="ob-add-btn" onclick="addMeta()">+ Adicionar meta financeira</button>`;
+  return html;
+}
+function addMeta(){if(!OB.metas)OB.metas=[];OB.metas.push({nome:'',total:0,guardado:0,aporte:0,prazo:'',prioridade:'Média',onde:'Tesouro Selic'});obRender();}
+function remMeta(i){OB.metas.splice(i,1);obRender();}
 
 function obNext(){
   const s=OB.step;
@@ -872,22 +956,24 @@ function obNext(){
     if(!v||v<=0){alert('Informe sua renda mensal.');return;}
     OB.renda.valor=v;OB.renda.tipo=document.getElementById('ob-tipo')?.value||'fixa';OB.renda.dia=parseInt(document.getElementById('ob-dia')?.value||1);OB.renda.extra=parseFloat(document.getElementById('ob-extra')?.value||0);
   }
-  if(s===4){salvarOB();return;}
+  if(s===5){salvarOB();return;}
   OB.step++;obRender();
 }
 function obBack(){if(OB.step>0){OB.step--;obRender();}}
 
 async function salvarOB(){
   lss('fin_renda',OB.renda.valor);
+  lss('fin_renda_dia',OB.renda.dia||1);
   lss('fin_bancos',JSON.stringify(OB.bancos));
   lss('fin_despesas',JSON.stringify(OB.despesas));
   lss('fin_inv',JSON.stringify(OB.investimentos));
+  lss('fin_metas_ob',JSON.stringify(OB.metas||[]));
   lss('fin_ob_done','1');
   // Atualizar FC com fechamentos customizados
   OB.bancos.forEach(b=>{if(b.credito!==false){FC[b.cr||'Crédito '+b.id]=b.fc||15;}});
   // Salvar no Sheets via Apps Script
   if(CFG.scriptUrl){
-    try{await chamarScript('salvarPerfil',{renda:OB.renda,bancos:OB.bancos,despesas:OB.despesas,investimentos:OB.investimentos});}catch(e){console.warn('Erro ao salvar perfil:',e);}
+    try{await chamarScript('salvarPerfil',{renda:OB.renda,bancos:OB.bancos,despesas:OB.despesas,investimentos:OB.investimentos,metas:OB.metas||[]});}catch(e){console.warn('Erro ao salvar perfil:',e);}
   }
   document.getElementById('obOv').classList.add('hidden');
   carregarDados();
@@ -989,6 +1075,7 @@ async function carregarDados(){
     );
     renderAll();
     atualizarBadges();
+    verificarPopupSalario();
   }catch(e){
     console.error('Erro ao processar dados:',e);
     document.getElementById('sec-visao').innerHTML=`<div class="empty">⚠️ Erro ao processar dados.<br><small>${e.message}</small></div>`;
@@ -1088,17 +1175,26 @@ function processarDados(tr,ve,me,ins,es,gf,mesStr){
 
   // Projeção com detalhamento
   const invTotal=JSON.parse(ls('fin_inv')||'[]').reduce((s,i)=>s+(i.valor||0),0);
-  const despFixasMes=despesasOB.reduce((s,d)=>s+(d.valor||0),0);
+  // despFixasMes = soma dos gastos fixos ativos da planilha (mais preciso que só onboarding)
+  const despFixasMes=gfRows.filter(r=>r[7]==='Sim'||r[7]===true).reduce((s,r)=>s+Math.abs(num(r[3])),0)||despesasOB.reduce((s,d)=>s+(d.valor||0),0);
+  const receitaBase=rendaPerfil||rec;
   const proj=[];
   for(let m=1;m<=3;m++){
     const mi=(ST.mesIdx+m)%12,ai=ST.mesIdx+m>11?ST.ano+1:ST.ano;
     const nomeM=MC[mi]+'/'+ai;
-    // Filtrar vencimentos que cairão neste mês futuro
+    // Vencimentos recorrentes que cairão neste mês
     const dtIni=new Date(ai,mi,1),dtFim=new Date(ai,mi+1,0);
-    const vencMes=vTodos.filter(v=>{const d=pD(v.vencimento);if(d&&d>=dtIni&&d<=dtFim)return true;if(v.diaVenc){const dv=new Date(ai,mi,v.diaVenc);return dv>=dtIni&&dv<=dtFim;}return false;});
+    // Usar diaVenc para calcular recorrência (independente da data armazenada)
+    const vencMes=vTodos.filter(v=>{
+      if(!v.diaVenc)return false;
+      const dv=new Date(ai,mi,v.diaVenc);
+      return dv>=dtIni&&dv<=dtFim&&v.status!=='Cancelado';
+    });
     const totalVencMes=vencMes.reduce((s,v)=>s+v.valor,0);
-    const saldoProj=(rendaPerfil||rec)-td;
-    proj.push({mes:nomeM,saldo:saldoProj,receita:rendaPerfil||rec,despesa:td,vencimentos:totalVencMes,vencItems:vencMes.slice(0,4),outros:Math.max(0,td-totalVencMes)});
+    // Despesa projetada = total dos vencimentos fixos do mês
+    const despesaProj=totalVencMes>0?totalVencMes:despFixasMes;
+    const saldoProj=receitaBase-despesaProj;
+    proj.push({mes:nomeM,saldo:saldoProj,receita:receitaBase,despesa:despesaProj,vencimentos:totalVencMes,vencItems:vencMes.slice(0,5),outros:Math.max(0,despesaProj-totalVencMes)});
   }
 
   const ultTr=tm.slice().reverse().slice(0,12).map(r=>({data:r[0],desc:r[1],valor:num(r[2]),tipo:r[3],pilar:r[4],cat:r[5],meio:r[6]}));
@@ -1382,6 +1478,50 @@ function rEstab(){
   if(d.naoMap.length>0){html+=`<div class="ea">⚠️ <strong>${d.naoMap.length} estabelecimento(s)</strong> para mapear na aba Estabelecimentos do Sheets</div>`;}
   html+=`<div class="cc" style="padding:0"><div style="padding:16px 20px"><div class="cc-ti">Todos os estabelecimentos (${d.eArr.length})</div></div><div class="tw"><table><thead><tr><th>Estabelecimento</th><th>Pilar</th><th>Categoria</th><th>Aparições</th><th>Status</th></tr></thead><tbody>${d.eArr.map(e=>`<tr><td>${e.amigavel||e.nome}</td><td><span class="pill ${PP[e.pilar]||'pe'}">${e.pilar}</span></td><td style="color:var(--t2)">${e.cat}</td><td style="font-family:var(--mono);color:var(--t3)">${e.vezes}x</td><td><span class="pill ${e.mapeado==='Sim'?'pi':'pe'}">${e.mapeado==='Sim'?'✓ Mapeado':'Mapear'}</span></td></tr>`).join('')}</tbody></table></div></div>`;
   document.getElementById('sec-estab').innerHTML=html;
+}
+
+// ══ POPUP SALÁRIO ═══════════════════════════════════════════
+function verificarPopupSalario(){
+  const renda=parseFloat(ls('fin_renda')||0);
+  const diaSalario=parseInt(ls('fin_renda_dia')||1);
+  if(!renda||!diaSalario)return;
+  const hoje=new Date();
+  const diaHoje=hoje.getDate();
+  if(diaHoje!==diaSalario)return;
+  // Verificar se já confirmou hoje
+  const chave='fin_salary_check_'+hoje.toISOString().split('T')[0];
+  if(ls(chave))return;
+  // Verificar se já tem salário lançado este mês
+  if(ST.dados&&ST.dados.rec>0){
+    // Já tem receita lançada, não mostrar
+    lss(chave,'skip');return;
+  }
+  const popup=document.getElementById('salaryPopup');
+  const sub=document.getElementById('spSub');
+  if(sub)sub.textContent=`Hoje é dia ${diaSalario}, dia do seu salário (R$ ${fmt(renda)}). Já recebeu?`;
+  if(popup)popup.classList.remove('hidden');
+}
+
+function confirmarSalario(recebeu){
+  const popup=document.getElementById('salaryPopup');
+  if(popup)popup.classList.add('hidden');
+  const hoje=new Date();
+  const chave='fin_salary_check_'+hoje.toISOString().split('T')[0];
+  lss(chave,'1');
+  if(recebeu){
+    // Abrir modal pré-preenchido com salário
+    abrirModal();
+    setT('receita');
+    setTimeout(()=>{
+      const renda=parseFloat(ls('fin_renda')||0);
+      const mfv=document.getElementById('mfv');
+      const mfde=document.getElementById('mfde');
+      const mfp=document.getElementById('mfp');
+      if(mfv)mfv.value=renda;
+      if(mfde)mfde.value='Salário';
+      if(mfp){mfp.value='Receita';uC();}
+    },100);
+  }
 }
 
 // ══ CHART CAT TOGGLE ════════════════════════════════════════
