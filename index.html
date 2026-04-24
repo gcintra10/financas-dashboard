@@ -300,6 +300,14 @@ tbody tr:hover td{background:var(--ci)}
 .cal-d.hv{background:var(--rd)}
 .cal-d.hv .cal-n{color:var(--re);font-weight:700}
 .cal-pip{width:4px;height:4px;border-radius:50%;background:var(--re);margin-top:1px}
+.cal-tooltip{position:fixed;z-index:999;background:var(--card);border:1px solid var(--b2);border-radius:var(--rs);padding:10px 14px;box-shadow:var(--shm);font-size:12px;max-width:220px;pointer-events:none;opacity:0;transition:opacity .15s}
+.cal-tooltip.vis{opacity:1}
+.cal-tooltip-title{font-weight:700;font-size:13px;margin-bottom:6px;color:var(--t)}
+.cal-tooltip-item{display:flex;justify-content:space-between;gap:16px;padding:3px 0;border-bottom:1px solid var(--b)}
+.cal-tooltip-item:last-child{border-bottom:none}
+.cal-tooltip-nm{color:var(--t2)}
+.cal-tooltip-vl{font-family:var(--mono);font-weight:600}
+.cal-tooltip-vl.pos{color:var(--gr)}.cal-tooltip-vl.neg{color:var(--re)}
 
 /* ══ INSIGHTS ═══════════════════════════════════════════ */
 .ins-g{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -543,6 +551,7 @@ tbody tr:hover td{background:var(--ci)}
   </div>
 </div>
 
+<div class="cal-tooltip" id="calTooltip"></div>
 <button class="fab" onclick="abrirModal()"><svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></button>
 
 <!-- MODAL -->
@@ -1061,7 +1070,20 @@ function processarDados(tr,ve,me,ins,es,gf,mesStr){
 
   const ultTr=tm.slice().reverse().slice(0,12).map(r=>({data:r[0],desc:r[1],valor:num(r[2]),tipo:r[3],pilar:r[4],cat:r[5],meio:r[6]}));
 
-  return{rec,td,saldo:rec-td,saldoAV:rec-td-tp,gpp,topC,hist,vp,tp,tv,mArr,iArr,eArr,naoMap,proj,ultTr,rendaPerfil,invTotal,despFixasMes};
+  // Histórico por pilar (6 meses)
+  const histPilares={};
+  Object.keys(PM).forEach(pilar=>{
+    histPilares[pilar]=[];
+    for(let m=5;m>=0;m--){
+      const mi=(ST.mesIdx-m+12)%12,ai=ST.mesIdx-m<0?ST.ano-1:ST.ano;
+      const ms=MC[mi]+'/'+ai;
+      const _t=filtraMes(lt,ms);
+      const real=_t.filter(r=>r[3]==='Despesa'&&r[4]===pilar).reduce((s,r)=>s+Math.abs(num(r[2])),0);
+      histPilares[pilar].push({mes:MC[mi],real});
+    }
+  });
+
+  return{rec,td,saldo:rec-td,saldoAV:rec-td-tp,gpp,topC,hist,histPilares,vp,tp,tv,mArr,iArr,eArr,naoMap,proj,ultTr,rendaPerfil,invTotal,despFixasMes};
 }
 
 function num(v){if(typeof v==='number')return v;return parseFloat((v||'0').toString().replace(/[^0-9.,-]/g,'').replace(',','.'))||0;}
@@ -1137,7 +1159,13 @@ function rVisao(){
       <div class="cw h220"><canvas id="cL"></canvas></div>
     </div>
     <div class="cc">
-      <div class="cc-hd"><div><div class="cc-ti">Gastos por categoria</div><div class="cc-su">Top ${d.topC.length} categorias</div></div></div>
+      <div class="cc-hd">
+        <div><div class="cc-ti">Gastos por categoria</div><div class="cc-su">Top ${d.topC.length} categorias</div></div>
+        <div style="display:flex;gap:6px">
+          <button class="chip active" id="btnBarras" onclick="setChartTipo('barras')">≡ Barras</button>
+          <button class="chip" id="btnRosca" onclick="setChartTipo('rosca')">◎ Rosca</button>
+        </div>
+      </div>
       <div class="cw h220"><canvas id="cB"></canvas></div>
     </div>
   </div>
@@ -1191,13 +1219,7 @@ function rVisao(){
     ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:gc('t2'),font:{size:11,family:'Plus Jakarta Sans'},boxWidth:8,padding:10}}},scales:{x:{ticks:{color:gc('t2'),font:{size:11}},grid:{color:gc('b')}},y:{ticks:{color:gc('t2'),font:{size:11},callback:v=>v===0?'0':'R$'+Math.abs(v/1000).toFixed(0)+'k'},grid:{color:gc('b')}}}}});
   }
 
-  // Barras horizontais modernas (substituindo donut)
-  dc('cB');
-  const ctxB=document.getElementById('cB')?.getContext('2d');
-  if(ctxB&&d.topC.length>0){
-    const cols=[gc('ac'),'#34D399','#F87171','#FBBF24','#FB923C','#A78BFA','#F472B6','#60A5FA'];
-    charts['cB']=new Chart(ctxB,{type:'bar',data:{labels:d.topC.map(c=>c.cat),datasets:[{data:d.topC.map(c=>c.val),backgroundColor:cols,borderRadius:6,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${fmt(ctx.raw)}`}}},scales:{x:{ticks:{color:gc('t2'),font:{size:11},callback:v=>'R$'+v.toLocaleString('pt-BR')},grid:{color:gc('b')}},y:{ticks:{color:gc('t2'),font:{size:11}},grid:{display:false}}}}});
-  }
+  renderChartCat();
 }
 
 function rPilares(){
@@ -1219,7 +1241,10 @@ function rPilares(){
   html+=`</div>
     <div>
       <div class="cc" style="margin-bottom:16px">
-        <div class="cc-hd"><div class="cc-ti">Distribuição comparativa</div></div>
+        <div class="cc-hd">
+          <div><div class="cc-ti">Evolução por pilar — 6 meses</div><div class="cc-su">Real vs meta ao longo do tempo</div></div>
+          <select id="selPilar" onchange="renderPilarHist()" style="background:var(--ci);border:1px solid var(--b);border-radius:var(--rx);padding:5px 10px;color:var(--t2);font-size:12px;outline:none"></select>
+        </div>
         <div class="cw h260"><canvas id="cPil"></canvas></div>
       </div>
       <div class="cc">
@@ -1230,16 +1255,10 @@ function rPilares(){
   </div>`;
   document.getElementById('sec-pilares').innerHTML=html;
 
-  const ref2=d.rendaPerfil||d.rec;
-  dc('cPil');
-  const ctxP=document.getElementById('cPil')?.getContext('2d');
-  if(ctxP){
-    const pl=Object.keys(PM);
-    charts['cPil']=new Chart(ctxP,{type:'bar',data:{labels:pl.map(p=>PI[p]+' '+p),datasets:[
-      {label:'Meta',data:pl.map(p=>+(ref2*PM[p]).toFixed(0)),backgroundColor:gc('b'),borderRadius:6,borderSkipped:false},
-      {label:'Real',data:pl.map(p=>+(d.gpp[p]||0).toFixed(0)),backgroundColor:[gc('ac'),'#34D399','#FBBF24','#60A5FA','#A78BFA','#F472B6'],borderRadius:6,borderSkipped:false},
-    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:gc('t2'),font:{size:11,family:'Plus Jakarta Sans'}}}},scales:{x:{ticks:{color:gc('t2'),font:{size:10}},grid:{display:false}},y:{ticks:{color:gc('t2'),callback:v=>'R$'+v.toLocaleString('pt-BR')},grid:{color:gc('b')}}}}});
-  }
+  // Preencher select de pilares
+  const selP=document.getElementById('selPilar');
+  if(selP&&selP.options.length===0){Object.keys(PM).forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=PI[p]+' '+p;selP.appendChild(o);});}
+  renderPilarHist();
 
   dc('cRad');
   const ctxR=document.getElementById('cRad')?.getContext('2d');
@@ -1271,18 +1290,21 @@ function rVenc(){
   else d.vp.forEach(v=>{
     const dt=pD(v.vencimento),diff=dt?Math.round((dt-hoje)/864e5):99;
     const ds=diff===0?'Hoje!':diff===1?'Amanhã':`Em ${diff} dias`;
-    const uc=diff<=3?'urg':diff<=7?'prx':'nrm';
-    const tc=v.status==='Pago'?'g':v.status==='Atrasado'?'a':'p';
+    const isReceita=v.tipo==='Receita'||v.nome?.toLowerCase().includes('salário')||v.nome?.toLowerCase().includes('salario');
+    const uc=isReceita?'nrm':diff<=3?'urg':diff<=7?'prx':'nrm';
+    const dotCls=isReceita?'nrm':uc;
+    const tc=isReceita?'g':v.status==='Pago'?'g':v.status==='Atrasado'?'a':'p';
     const origem=v.origem==='perfil'?'📋 Perfil':v.origem==='gastos_fixos'?'📄 Fixos':'📊 Planilha';
+    const valorCls=isReceita?'style="color:var(--gr)"':'';
     html+=`<div class="vc-item">
-      <div class="vc-dot ${uc}"></div>
+      <div class="vc-dot ${dotCls}" ${isReceita?'style="background:var(--gr);box-shadow:0 0 0 3px var(--gd)"':''}></div>
       <div class="vc-inf">
         <div class="vc-nm">${v.nome}</div>
         <div class="vc-dt">${ds} · ${v.banco||''} · <span style="color:var(--t3)">${origem}</span></div>
       </div>
       <div class="vc-rt">
-        <div class="vc-vl">${v.valor>0?fmt(v.valor):'Variável'}</div>
-        <span class="vc-tg ${tc}">${v.status}</span>
+        <div class="vc-vl" ${valorCls}>${isReceita?'+':''}${v.valor>0?fmt(v.valor):'Variável'}</div>
+        <span class="vc-tg ${tc}">${isReceita?'Receita':v.status}</span>
       </div>
     </div>`;
   });
@@ -1295,8 +1317,10 @@ function rVenc(){
   for(let i=0;i<first;i++) html+=`<div class="cal-d oth"></div>`;
   for(let d2=1;d2<=total;d2++){
     const isH=new Date(ano,mes,d2).getTime()===hoje.getTime();
-    const hv=d.tv.some(v=>{const vd=v.data;return vd&&vd.getDate()===d2&&vd.getMonth()===mes&&vd.getFullYear()===ano&&v.status!=='Pago';});
-    html+=`<div class="cal-d ${isH?'tod':''} ${hv?'hv':''}"><span class="cal-n">${d2}</span>${hv?'<div class="cal-pip"></div>':''}</div>`;
+    const vencsDia=d.tv.filter(v=>{const vd=v.data;return vd&&vd.getDate()===d2&&vd.getMonth()===mes&&vd.getFullYear()===ano;});
+    const hv=vencsDia.some(v=>v.status!=='Pago');
+    const dataStr=`${ano}-${String(mes+1).padStart(2,'0')}-${String(d2).padStart(2,'0')}`;
+    html+=`<div class="cal-d ${isH?'tod':''} ${hv?'hv':''}" ${vencsDia.length>0?`onclick="mostrarCalTooltip(event,'${dataStr}')"`:''} style="${vencsDia.length>0?'cursor:pointer':''}"><span class="cal-n">${d2}</span>${hv?'<div class="cal-pip"></div>':''}</div>`;
   }
   html+=`</div></div></div>`;
   document.getElementById('sec-venc').innerHTML=html;
@@ -1324,6 +1348,179 @@ function rEstab(){
   if(d.naoMap.length>0){html+=`<div class="ea">⚠️ <strong>${d.naoMap.length} estabelecimento(s)</strong> para mapear na aba Estabelecimentos do Sheets</div>`;}
   html+=`<div class="cc" style="padding:0"><div style="padding:16px 20px"><div class="cc-ti">Todos os estabelecimentos (${d.eArr.length})</div></div><div class="tw"><table><thead><tr><th>Estabelecimento</th><th>Pilar</th><th>Categoria</th><th>Aparições</th><th>Status</th></tr></thead><tbody>${d.eArr.map(e=>`<tr><td>${e.amigavel||e.nome}</td><td><span class="pill ${PP[e.pilar]||'pe'}">${e.pilar}</span></td><td style="color:var(--t2)">${e.cat}</td><td style="font-family:var(--mono);color:var(--t3)">${e.vezes}x</td><td><span class="pill ${e.mapeado==='Sim'?'pi':'pe'}">${e.mapeado==='Sim'?'✓ Mapeado':'Mapear'}</span></td></tr>`).join('')}</tbody></table></div></div>`;
   document.getElementById('sec-estab').innerHTML=html;
+}
+
+// ══ CHART CAT TOGGLE ════════════════════════════════════════
+let chartTipo='barras';
+function setChartTipo(tipo){
+  chartTipo=tipo;
+  document.getElementById('btnBarras')?.classList.toggle('active',tipo==='barras');
+  document.getElementById('btnRosca')?.classList.toggle('active',tipo==='rosca');
+  renderChartCat();
+}
+function renderChartCat(){
+  if(!ST.dados)return;
+  const d=ST.dados;
+  const cols=[gc('ac'),'#34D399','#F87171','#FBBF24','#FB923C','#A78BFA','#F472B6','#60A5FA'];
+  const total=d.topC.reduce((s,c)=>s+c.val,0);
+  dc('cB');
+  const ctx=document.getElementById('cB')?.getContext('2d');
+  if(!ctx||d.topC.length===0)return;
+  if(chartTipo==='rosca'){
+    charts['cB']=new Chart(ctx,{
+      type:'doughnut',
+      data:{labels:d.topC.map(c=>c.cat),datasets:[{data:d.topC.map(c=>c.val),backgroundColor:cols,borderWidth:0,hoverOffset:6,borderRadius:4}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'72%',
+        plugins:{
+          legend:{position:'right',labels:{color:gc('t2'),font:{size:11,family:'Plus Jakarta Sans'},boxWidth:8,padding:8}},
+          tooltip:{callbacks:{label:ctx2=>`${ctx2.label}: ${fmt(ctx2.raw)} (${(ctx2.raw/total*100).toFixed(1)}%)`}},
+          datalabels:{display:false}
+        }
+      }
+    });
+  } else {
+    charts['cB']=new Chart(ctx,{
+      type:'bar',
+      data:{labels:d.topC.map(c=>c.cat),datasets:[{data:d.topC.map(c=>c.val),backgroundColor:cols,borderRadius:6,borderSkipped:false}]},
+      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+        plugins:{
+          legend:{display:false},
+          tooltip:{callbacks:{label:ctx2=>`${fmt(ctx2.raw)} · ${(ctx2.raw/total*100).toFixed(1)}%`}},
+          datalabels:{
+            display:true,anchor:'end',align:'end',
+            color:gc('t2'),font:{size:10,family:'Plus Jakarta Sans',weight:'600'},
+            formatter:(v)=>fmt(v)
+          }
+        },
+        scales:{
+          x:{display:false,grid:{display:false}},
+          y:{ticks:{color:gc('t2'),font:{size:11}},grid:{display:false}}
+        },
+        layout:{padding:{right:80}}
+      }
+    });
+  }
+}
+
+// ══ PILAR HISTÓRICO ══════════════════════════════════════════
+function renderPilarHist(){
+  if(!ST.dados)return;
+  const d=ST.dados;
+  const sel=document.getElementById('selPilar');
+  const pilar=sel?.value||Object.keys(PM)[0];
+  const ref=d.rendaPerfil||d.rec;
+  const meta=ref*PM[pilar];
+
+  // Histórico dos últimos 6 meses para este pilar
+  const hist=d.hist; // já calculado com saldo, mas precisamos por pilar
+  // Usar histPilares se disponível, senão usar o que temos
+  const histP=d.histPilares?.[pilar]||hist.map(h=>({mes:h.mes,real:0,meta}));
+
+  dc('cPil');
+  const ctx=document.getElementById('cPil')?.getContext('2d');
+  if(!ctx)return;
+
+  const labels=histP.map(h=>h.mes);
+  const reais=histP.map(h=>h.real||0);
+  const metas=histP.map(()=>meta);
+
+  // Cores das barras: verde se abaixo da meta, vermelho se acima
+  const barCols=reais.map(r=>r<=meta?gc('gr'):gc('re'));
+  const barColsAlpha=reais.map(r=>r<=meta?gc('gr')+'33':gc('re')+'33');
+
+  charts['cPil']=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {
+          label:'Real',
+          data:reais,
+          backgroundColor:barCols,
+          borderColor:barCols,
+          borderWidth:0,
+          borderRadius:8,
+          borderSkipped:false,
+          barThickness:28,
+        },
+        {
+          label:'Meta',
+          data:metas,
+          type:'line',
+          borderColor:gc('t2'),
+          borderWidth:1.5,
+          borderDash:[6,4],
+          pointRadius:0,
+          fill:false,
+          tension:0,
+        }
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{
+          label:ctx2=>{
+            if(ctx2.dataset.label==='Meta')return `Meta: ${fmt(ctx2.raw)}`;
+            const pct=(ctx2.raw/meta*100).toFixed(0);
+            const status=ctx2.raw<=meta?'✅ dentro':'⚠️ acima';
+            return `Real: ${fmt(ctx2.raw)} (${pct}% da meta · ${status})`;
+          }
+        }},
+        datalabels:{
+          display:(ctx2)=>ctx2.dataset.label==='Real',
+          anchor:'end',align:'top',
+          color:(ctx2)=>reais[ctx2.dataIndex]<=meta?gc('gr'):gc('re'),
+          font:{size:10,weight:'700',family:'Plus Jakarta Sans'},
+          formatter:(v)=>{const pct=(v/meta*100).toFixed(0);return pct+'%';}
+        }
+      },
+      scales:{
+        x:{ticks:{color:gc('t2'),font:{size:11}},grid:{display:false}},
+        y:{display:false,grid:{display:false}}
+      },
+      layout:{padding:{top:24}}
+    }
+  });
+}
+
+// ══ CALENDÁRIO TOOLTIP ═══════════════════════════════════════
+function mostrarCalTooltip(e,dataStr){
+  if(!ST.dados)return;
+  const [y,m,d]=dataStr.split('-').map(Number);
+  const vencsDia=ST.dados.tv.filter(v=>{
+    const vd=v.data;
+    return vd&&vd.getDate()===d&&vd.getMonth()===(m-1)&&vd.getFullYear()===y;
+  });
+  if(vencsDia.length===0)return;
+
+  const tip=document.getElementById('calTooltip');
+  const dataFmt=`${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;
+  let html=`<div class="cal-tooltip-title">📅 ${dataFmt}</div>`;
+  vencsDia.forEach(v=>{
+    const isRec=v.nome?.toLowerCase().includes('salário')||v.nome?.toLowerCase().includes('salario');
+    const cls=isRec?'pos':v.status==='Pago'?'':v.status==='Atrasado'?'neg':'';
+    html+=`<div class="cal-tooltip-item">
+      <span class="cal-tooltip-nm">${v.nome}</span>
+      <span class="cal-tooltip-vl ${cls}">${isRec?'+':''}${v.valor?fmt(v.valor):'Variável'}</span>
+    </div>`;
+  });
+  tip.innerHTML=html;
+  tip.classList.add('vis');
+
+  // Posicionar tooltip
+  const rect=e.target.getBoundingClientRect();
+  const tipW=220,tipH=80;
+  let left=rect.left+window.scrollX;
+  let top=rect.bottom+window.scrollY+6;
+  if(left+tipW>window.innerWidth-10)left=window.innerWidth-tipW-10;
+  if(top+tipH>window.innerHeight-10)top=rect.top+window.scrollY-tipH-6;
+  tip.style.left=left+'px';tip.style.top=top+'px';
+
+  const fechar=()=>{tip.classList.remove('vis');document.removeEventListener('click',fechar);};
+  setTimeout(()=>document.addEventListener('click',fechar),10);
+  e.stopPropagation();
 }
 
 // ══ CHAT ════════════════════════════════════════════════════
