@@ -952,14 +952,47 @@ function mostrarOk(id){const el=document.getElementById(id);if(el){el.style.disp
 
 // ══ DADOS ════════════════════════════════════════════════════
 async function carregarDados(){
+  const abas=['Transações','Vencimentos','Metas','Insights','Estabelecimentos'];
+  const resultados={};
+  const erros=[];
+
+  // Buscar cada aba individualmente para identificar qual falha
+  for(const aba of abas){
+    try{
+      resultados[aba]=await buscarAba(aba);
+    }catch(e){
+      erros.push(aba);
+      resultados[aba]=[];
+      console.warn('Falha ao buscar aba:',aba,e);
+    }
+  }
+
+  // Gastos Fixos é opcional
+  let gf=[];
+  try{gf=await buscarAba('Gastos Fixos');}catch(e){console.warn('Gastos Fixos não encontrada');}
+
+  if(erros.length>0){
+    console.warn('Abas com erro:',erros);
+    // Só trava se Transações falhou — o resto é opcional
+    if(erros.includes('Transações')){
+      document.getElementById('sec-visao').innerHTML=`<div class="empty">⚠️ Erro ao carregar a aba <strong>Transações</strong>.<br><small>Verifique se a planilha está publicada na web e compartilhada publicamente.</small><br><br><small style="color:var(--t3)">ID: ${CFG.sheetId}</small></div>`;
+      return;
+    }
+  }
+
   try{
-    const [tr,ve,me,ins,es]=await Promise.all([buscarAba('Transações'),buscarAba('Vencimentos'),buscarAba('Metas'),buscarAba('Insights'),buscarAba('Estabelecimentos')]);
-    // Também buscar Gastos Fixos para vencimentos
-    let gf=[];try{gf=await buscarAba('Gastos Fixos');}catch{}
-    ST.dados=processarDados(tr,ve,me,ins,es,gf,MC[ST.mesIdx]+'/'+ST.ano);
+    ST.dados=processarDados(
+      resultados['Transações'],resultados['Vencimentos'],
+      resultados['Metas'],resultados['Insights'],
+      resultados['Estabelecimentos'],gf,
+      MC[ST.mesIdx]+'/'+ST.ano
+    );
     renderAll();
     atualizarBadges();
-  }catch(e){console.error(e);document.getElementById('sec-visao').innerHTML='<div class="empty">⚠️ Erro ao carregar dados.<br><small>Verifique se a planilha está publicada na web.</small></div>';}
+  }catch(e){
+    console.error('Erro ao processar dados:',e);
+    document.getElementById('sec-visao').innerHTML=`<div class="empty">⚠️ Erro ao processar dados.<br><small>${e.message}</small></div>`;
+  }
 }
 async function buscarAba(nome){const url=`https://docs.google.com/spreadsheets/d/${CFG.sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(nome)}`;const r=await fetch(url);if(!r.ok)throw new Error('Falha: '+nome);return pCSV(await r.text());}
 function pCSV(csv){return csv.split('\n').filter(l=>l.trim()).map(l=>{const c=[];let d=false,v='';for(let x of l){if(x==='"'){d=!d;continue;}if(x===','&&!d){c.push(v.trim());v='';}else v+=x;}c.push(v.trim());return c;});}
