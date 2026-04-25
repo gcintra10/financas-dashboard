@@ -545,12 +545,36 @@ tbody tr:hover td{background:var(--ci)}
 <!-- ══ ONBOARDING ══════════════════════════════════════════ -->
 <!-- ══ LOGIN ══════════════════════════════════════════════ -->
 <div class="login-overlay" id="loginOv">
-  <div class="login-card">
-    <div class="login-logo">💰</div>
-    <div class="login-title">Finanças</div>
-    <div class="login-sub">Selecione seu perfil para continuar</div>
-    <div class="login-users" id="loginUsers"></div>
-    <div class="pin-wrap" id="pinWrap">
+  <div class="login-card" id="loginCard">
+    <!-- Etapa 1: email -->
+    <div id="loginStepEmail">
+      <div class="login-logo">💰</div>
+      <div class="login-title">Finanças</div>
+      <div class="login-sub" id="loginSub">Entre com seu e-mail para continuar</div>
+      <div style="margin-bottom:16px">
+        <input id="loginEmail" type="email" placeholder="seu@email.com" autocomplete="email"
+          style="width:100%;padding:12px 14px;background:var(--ci);border:1.5px solid var(--b);border-radius:var(--rs);color:var(--t);font-size:15px;outline:none;font-family:var(--font);transition:border-color var(--dur)"
+          oninput="document.getElementById('loginEmailErro').textContent=''"
+          onkeydown="if(event.key==='Enter')loginVerificarEmail()"/>
+        <div id="loginEmailErro" style="color:var(--re);font-size:12px;margin-top:6px;min-height:18px"></div>
+      </div>
+      <button onclick="loginVerificarEmail()"
+        style="width:100%;padding:13px;background:var(--ac);color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer;transition:opacity var(--dur)"
+        onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">
+        Continuar →
+      </button>
+    </div>
+
+    <!-- Etapa 2: senha (primeiro login) ou PIN -->
+    <div id="loginStepAuth" style="display:none">
+      <button onclick="loginVoltarEmail()" style="background:none;border:none;color:var(--t3);font-size:13px;cursor:pointer;margin-bottom:16px;display:flex;align-items:center;gap:4px">← Voltar</button>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:10px 12px;background:var(--ci);border-radius:var(--rs)">
+        <div id="loginAvAuth" class="login-av" style="width:38px;height:38px;font-size:16px;flex-shrink:0"></div>
+        <div>
+          <div id="loginNomeAuth" style="font-size:14px;font-weight:700"></div>
+          <div id="loginEmailAuth" style="font-size:12px;color:var(--t3)"></div>
+        </div>
+      </div>
       <div class="pin-label" id="pinLabel">Digite seu PIN</div>
       <div class="pin-dots" id="pinDots">
         <div class="pin-dot" id="pd0"></div>
@@ -558,13 +582,62 @@ tbody tr:hover td{background:var(--ci)}
         <div class="pin-dot" id="pd2"></div>
         <div class="pin-dot" id="pd3"></div>
       </div>
-      <div class="pin-pad">
-        ${[1,2,3,4,5,6,7,8,9].map(n=>`<button class="pin-key" onclick="pinDigit(${n})">${n}</button>`).join('')}
-        <button class="pin-key del" onclick="pinDel()">⌫</button>
-        <button class="pin-key" onclick="pinDigit(0)">0</button>
-        <button class="pin-key del" onclick="pinReset()">✕</button>
-      </div>
+      <div class="pin-pad" id="pinPad"></div>
       <div class="pin-erro" id="pinErro"></div>
+    </div>
+
+    <!-- Etapa 3: primeiro login — senha temporária -->
+    <div id="loginStepSenhaTemp" style="display:none">
+      <button onclick="loginVoltarEmail()" style="background:none;border:none;color:var(--t3);font-size:13px;cursor:pointer;margin-bottom:16px;display:flex;align-items:center;gap:4px">← Voltar</button>
+      <div class="login-logo" style="background:linear-gradient(135deg,#059669,#34D399)">🔑</div>
+      <div class="login-title" style="font-size:18px">Primeiro acesso</div>
+      <div class="login-sub">Digite a senha temporária que você recebeu</div>
+      <div style="position:relative;margin-bottom:14px">
+        <input id="loginSenhaTemp" type="password" placeholder="Senha temporária" autocomplete="off"
+          style="width:100%;padding:12px 40px 12px 14px;background:var(--ci);border:1.5px solid var(--b);border-radius:var(--rs);color:var(--t);font-size:15px;outline:none;font-family:var(--font)"
+          onkeydown="if(event.key==='Enter')loginVerificarSenhaTemp()"/>
+        <button onclick="toggleSenha('loginSenhaTemp',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t3);cursor:pointer;font-size:16px">👁</button>
+      </div>
+      <div id="loginSenhaTempErro" style="color:var(--re);font-size:12px;margin-bottom:10px;min-height:18px"></div>
+      <button onclick="loginVerificarSenhaTemp()"
+        style="width:100%;padding:13px;background:var(--ac);color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer">
+        Verificar →
+      </button>
+    </div>
+
+    <!-- Etapa 4: criar PIN (pós senha temp) -->
+    <div id="loginStepCriarPIN" style="display:none">
+      <div class="login-logo" style="background:linear-gradient(135deg,#7C3AED,#A855F7)">🔒</div>
+      <div class="login-title" style="font-size:18px">Crie seu PIN</div>
+      <div class="login-sub" id="criarPINSub">Escolha um PIN de 4 dígitos para acessos futuros</div>
+      <div class="pin-dots" id="pinDotsCriar">
+        <div class="pin-dot" id="pdc0"></div>
+        <div class="pin-dot" id="pdc1"></div>
+        <div class="pin-dot" id="pdc2"></div>
+        <div class="pin-dot" id="pdc3"></div>
+      </div>
+      <div class="pin-pad" id="pinPadCriar"></div>
+      <div class="pin-erro" id="pinErroCriar"></div>
+    </div>
+
+    <!-- Etapa 5: definir nome de exibição (opcional, só primeiro login) -->
+    <div id="loginStepNome" style="display:none">
+      <div class="login-logo" style="background:linear-gradient(135deg,#F59E0B,#FBBF24)">👋</div>
+      <div class="login-title" style="font-size:18px">Como quer ser chamado?</div>
+      <div class="login-sub">Esse nome aparece no dashboard. Pode ser seu nome ou apelido.</div>
+      <div style="margin-bottom:16px">
+        <input id="loginNomeInput" type="text" placeholder="Ex: Gabriel, Gabi..." autocomplete="off" maxlength="30"
+          style="width:100%;padding:12px 14px;background:var(--ci);border:1.5px solid var(--b);border-radius:var(--rs);color:var(--t);font-size:15px;outline:none;font-family:var(--font);text-align:center"
+          onkeydown="if(event.key==='Enter')loginFinalizarCadastro()"/>
+      </div>
+      <button onclick="loginFinalizarCadastro()"
+        style="width:100%;padding:13px;background:var(--gr);color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer">
+        Entrar no dashboard →
+      </button>
+      <button onclick="loginFinalizarCadastro(true)"
+        style="width:100%;padding:10px;background:none;border:none;color:var(--t3);font-size:13px;cursor:pointer;margin-top:6px">
+        Pular, usar nome padrão
+      </button>
     </div>
   </div>
 </div>
@@ -957,30 +1030,35 @@ window.addEventListener('DOMContentLoaded',()=>{
   // Verificar se já está logado nessa sessão
   const sessaoUsuario=sessionStorage.getItem('fin_sessao_usuario');
   if(sessaoUsuario){
-    USUARIO_ATUAL=USUARIOS.find(u=>u.id===sessaoUsuario)||USUARIOS[0];
+    // Restaurar dados do usuário do localStorage (cache)
+    const uBase=USUARIOS.find(u=>u.id===sessaoUsuario)||USUARIOS[0];
+    const nomeLocal=ls('fin_nome_'+sessaoUsuario);
+    USUARIO_ATUAL={...uBase,nome:nomeLocal||uBase.nome};
     atualizarUsuarioUI();
-  } else {
-    // Mostrar tela de login
-    renderLoginUsuarios();
+    const tema=ls('fin_tema')||'light';
+    document.documentElement.setAttribute('data-theme',tema);
+    atualizarTema(tema);
+    if(ST.sbCol)colSB(true);
+    atualizarLbl();fillSelects();
+    document.getElementById('mfd').value=new Date().toISOString().split('T')[0];
+    atualizarUser();
+    if(!CFG.sheetId||!CFG.scriptUrl){
+      document.getElementById('setupOv').classList.remove('hidden');
+    } else {
+      const obDone=ls('fin_ob_done');
+      if(!obDone) abrirOnboarding(); else carregarDados();
+    }
+    return;
   }
-
+  // Não logado — mostrar tela de login
   const tema=ls('fin_tema')||'light';
   document.documentElement.setAttribute('data-theme',tema);
   atualizarTema(tema);
   if(ST.sbCol)colSB(true);
-  atualizarLbl();
-  fillSelects();
+  atualizarLbl();fillSelects();
   document.getElementById('mfd').value=new Date().toISOString().split('T')[0];
   atualizarUser();
-  // Verificar se precisa de onboarding ou setup
-  if(!CFG.sheetId||!CFG.scriptUrl){
-    document.getElementById('setupOv').classList.remove('hidden');
-  } else {
-    // Verificar se já fez onboarding
-    const obDone=ls('fin_ob_done');
-    if(!obDone){abrirOnboarding();}
-    else{carregarDados();}
-  }
+  renderLoginUsuarios();
 });
 
 function atualizarUser(){
@@ -1409,99 +1487,232 @@ function navPorId(id){
 }
 // ══ SISTEMA DE USUÁRIOS ═════════════════════════════════════
 // ══ LOGIN PIN ═══════════════════════════════════════════════
+// ══ LOGIN — EMAIL + PIN ═══════════════════════════════════════
+// Estado do login
+let _loginUsuarioSel=null; // { id, nome, email, primeiroLogin, cor, aba, foto }
+let _pinBuffer='';
+let _pinCriando=false,_pinPrimeiroDigito='';
+let _pinBuffer2='',_pinCriando2=false,_pinPrimeiroDigito2=''; // para teclado criar PIN
+
+// Inicializar teclados PIN via JS (evita bugs de template literal no HTML)
+function initPinPads(){
+  ['pinPad','pinPadCriar'].forEach((padId,isPadCriar)=>{
+    const pad=document.getElementById(padId);
+    if(!pad||pad.children.length>0)return;
+    [1,2,3,4,5,6,7,8,9].forEach(n=>{
+      const btn=document.createElement('button');
+      btn.className='pin-key';btn.textContent=n;
+      btn.onclick=()=>isPadCriar?pinDigitCriar(n):pinDigit(n);
+      pad.appendChild(btn);
+    });
+    const del=document.createElement('button');
+    del.className='pin-key del';del.textContent='⌫';
+    del.onclick=()=>isPadCriar?pinDelCriar():pinDel();
+    const zero=document.createElement('button');
+    zero.className='pin-key';zero.textContent='0';
+    zero.onclick=()=>isPadCriar?pinDigitCriar(0):pinDigit(0);
+    const cancel=document.createElement('button');
+    cancel.className='pin-key del';cancel.textContent='✕';
+    cancel.onclick=()=>isPadCriar?pinResetCriar():loginVoltarEmail();
+    pad.append(del,zero,cancel);
+  });
+}
+
+function loginMostrarStep(step){
+  ['loginStepEmail','loginStepAuth','loginStepSenhaTemp','loginStepCriarPIN','loginStepNome']
+    .forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
+  const target=document.getElementById(step);
+  if(target) target.style.display='block';
+}
+
 function renderLoginUsuarios(){
   document.getElementById('loginOv').classList.remove('hidden');
-  const cont=document.getElementById('loginUsers');
-  if(!cont) return;
-  cont.innerHTML=USUARIOS.map(u=>`
-    <button class="login-user-btn" onclick="loginSelecionarUsuario('${u.id}')" id="lbu_${u.id}">
-      <div class="login-av" style="background:${u.cor}">${u.emoji}</div>
-      <div class="login-user-info">
-        <div class="login-user-name">${u.nome}</div>
-        <div class="login-user-desc">${u.desc}</div>
-      </div>
-      <span style="font-size:18px;color:var(--t3)">›</span>
-    </button>`).join('');
+  loginMostrarStep('loginStepEmail');
+  document.getElementById('loginEmail').value='';
+  document.getElementById('loginEmailErro').textContent='';
+  setTimeout(()=>document.getElementById('loginEmail').focus(),100);
+  initPinPads();
 }
 
-function loginSelecionarUsuario(id){
-  _loginUsuarioSel=USUARIOS.find(u=>u.id===id);
-  document.querySelectorAll('.login-user-btn').forEach(b=>b.classList.remove('selected'));
-  document.getElementById('lbu_'+id)?.classList.add('selected');
-  // Verificar se tem PIN configurado
-  const pin=ls('fin_pin_'+id);
-  if(!pin){
-    // Primeiro acesso — pede para criar PIN
-    document.getElementById('pinLabel').textContent='Crie um PIN de 4 dígitos';
-    _pinBuffer='';_pinCriando=true;_pinPrimeiroDigito='';
-    document.getElementById('pinWrap').style.display='block';
-    atualizarDots();
-  } else {
-    document.getElementById('pinLabel').textContent='Digite seu PIN, '+_loginUsuarioSel.nome;
-    _pinBuffer='';_pinCriando=false;
-    document.getElementById('pinWrap').style.display='block';
-    atualizarDots();
+async function loginVerificarEmail(){
+  const email=(document.getElementById('loginEmail').value||'').trim().toLowerCase();
+  if(!email||!email.includes('@')){
+    document.getElementById('loginEmailErro').textContent='Digite um e-mail válido.';
+    return;
   }
-  document.getElementById('pinErro').textContent='';
+  // Buscar usuário no Sheets (aba Usuarios)
+  document.getElementById('loginEmailErro').textContent='Verificando...';
+  try{
+    const usuarios=await buscarUsuariosSheets();
+    const u=usuarios.find(r=>( r.email||'').toLowerCase()===email);
+    if(!u){
+      document.getElementById('loginEmailErro').textContent='E-mail não encontrado. Verifique ou contate o administrador.';
+      return;
+    }
+    document.getElementById('loginEmailErro').textContent='';
+    _loginUsuarioSel=u;
+    // Verificar se é primeiro login
+    const pinLocal=ls('fin_pin_'+u.id);
+    if(u.primeiroLogin==='TRUE'||u.primeiroLogin===true||!pinLocal){
+      // Primeiro acesso — pede senha temporária
+      loginMostrarStep('loginStepSenhaTemp');
+      setTimeout(()=>document.getElementById('loginSenhaTemp')?.focus(),100);
+    } else {
+      // Já tem PIN — mostrar teclado PIN
+      loginMostrarStep('loginStepAuth');
+      const av=document.getElementById('loginAvAuth');
+      if(av){av.textContent=u.inicial||(u.nome||'?').charAt(0).toUpperCase();av.style.background=u.cor||'var(--ac)';}
+      document.getElementById('loginNomeAuth').textContent=u.nome||u.email;
+      document.getElementById('loginEmailAuth').textContent=u.email;
+      document.getElementById('pinLabel').textContent='Digite seu PIN';
+      _pinBuffer='';_pinCriando=false;
+      atualizarDots();
+      document.getElementById('pinErro').textContent='';
+    }
+  }catch(e){
+    document.getElementById('loginEmailErro').textContent='Erro ao conectar. Verifique a conexão e tente novamente.';
+    console.error(e);
+  }
 }
 
-let _pinCriando=false,_pinPrimeiroDigito='';
+async function buscarUsuariosSheets(){
+  // Tenta ler aba "Usuarios" do Sheets via Apps Script
+  try{
+    const resp=await fetch(CFG.scriptUrl,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'listarUsuarios',secret:CFG.secret})
+    });
+    const data=await resp.json();
+    if(data.usuarios) return data.usuarios;
+  }catch{}
+  // Fallback: usar USUARIOS hardcoded (desenvolvimento)
+  return USUARIOS.map(u=>({
+    id:u.id,nome:u.nome,email:u.email||u.id+'@financas.app',
+    primeiroLogin:!ls('fin_pin_'+u.id)?'TRUE':'FALSE',
+    senhatemp:'1234',cor:u.cor,aba:u.aba,inicial:u.inicial,foto:''
+  }));
+}
 
+function loginVoltarEmail(){
+  _loginUsuarioSel=null;_pinBuffer='';_pinBuffer2='';_pinCriando=false;_pinCriando2=false;_pinPrimeiroDigito='';_pinPrimeiroDigito2='';
+  loginMostrarStep('loginStepEmail');
+  setTimeout(()=>document.getElementById('loginEmail').focus(),100);
+}
+
+function loginVerificarSenhaTemp(){
+  const input=(document.getElementById('loginSenhaTemp').value||'').trim();
+  const esperada=(_loginUsuarioSel?.senhatemp||'').trim();
+  if(!input){document.getElementById('loginSenhaTempErro').textContent='Digite a senha temporária.';return;}
+  if(input!==esperada){
+    document.getElementById('loginSenhaTempErro').textContent='Senha incorreta. Verifique com o administrador.';
+    document.getElementById('loginSenhaTemp').value='';
+    return;
+  }
+  document.getElementById('loginSenhaTempErro').textContent='';
+  // Senha correta — ir para criar PIN
+  _pinBuffer2='';_pinCriando2=true;_pinPrimeiroDigito2='';
+  document.getElementById('criarPINSub').textContent='Escolha um PIN de 4 dígitos para acessos futuros';
+  atualizarDotsCriar();
+  document.getElementById('pinErroCriar').textContent='';
+  loginMostrarStep('loginStepCriarPIN');
+}
+
+function toggleSenha(inputId,btn){
+  const el=document.getElementById(inputId);
+  if(!el)return;
+  el.type=el.type==='password'?'text':'password';
+  btn.textContent=el.type==='password'?'👁':'🙈';
+}
+
+// Teclado PIN — autenticação
 function pinDigit(n){
-  if(_pinBuffer.length>=4) return;
-  _pinBuffer+=n;
-  atualizarDots();
-  if(_pinBuffer.length===4) setTimeout(pinVerificar,200);
+  if(_pinBuffer.length>=4)return;
+  _pinBuffer+=String(n);atualizarDots();
+  if(_pinBuffer.length===4)setTimeout(pinVerificar,180);
 }
 function pinDel(){_pinBuffer=_pinBuffer.slice(0,-1);atualizarDots();}
-function pinReset(){_pinBuffer='';_pinCriando=false;_pinPrimeiroDigito='';document.getElementById('pinWrap').style.display='none';document.querySelectorAll('.login-user-btn').forEach(b=>b.classList.remove('selected'));}
 function atualizarDots(){
-  for(let i=0;i<4;i++){
-    const d=document.getElementById('pd'+i);
-    if(d) d.classList.toggle('filled',i<_pinBuffer.length);
-  }
+  for(let i=0;i<4;i++){const d=document.getElementById('pd'+i);if(d)d.classList.toggle('filled',i<_pinBuffer.length);}
 }
 
 function pinVerificar(){
   const id=_loginUsuarioSel?.id;
-  if(!id) return;
-  if(_pinCriando){
-    // Criando PIN novo
-    if(!_pinPrimeiroDigito){
-      _pinPrimeiroDigito=_pinBuffer;_pinBuffer='';
-      document.getElementById('pinLabel').textContent='Confirme o PIN';
-      atualizarDots();
-    } else {
-      if(_pinBuffer===_pinPrimeiroDigito){
-        lss('fin_pin_'+id,_pinBuffer);
-        loginEntrar(_loginUsuarioSel);
-      } else {
-        document.getElementById('pinErro').textContent='PINs não conferem. Tente novamente.';
-        _pinBuffer='';_pinPrimeiroDigito='';
-        document.getElementById('pinLabel').textContent='Crie um PIN de 4 dígitos';
-        atualizarDots();
-      }
-    }
-    return;
-  }
-  // Verificando PIN existente
+  if(!id)return;
   const pinSalvo=ls('fin_pin_'+id);
   if(_pinBuffer===pinSalvo){
     loginEntrar(_loginUsuarioSel);
   } else {
-    document.getElementById('pinErro').textContent='PIN incorreto. Tente novamente.';
-    _pinBuffer='';
-    atualizarDots();
-    setTimeout(()=>document.getElementById('pinErro').textContent='',2000);
+    document.getElementById('pinErro').textContent='PIN incorreto.';
+    _pinBuffer='';atualizarDots();
+    setTimeout(()=>{ if(document.getElementById('pinErro')) document.getElementById('pinErro').textContent=''; },2000);
   }
 }
 
+// Teclado PIN — criação
+function pinDigitCriar(n){
+  if(_pinBuffer2.length>=4)return;
+  _pinBuffer2+=String(n);atualizarDotsCriar();
+  if(_pinBuffer2.length===4)setTimeout(pinVerificarCriar,180);
+}
+function pinDelCriar(){_pinBuffer2=_pinBuffer2.slice(0,-1);atualizarDotsCriar();}
+function pinResetCriar(){_pinBuffer2='';_pinPrimeiroDigito2='';_pinCriando2=false;atualizarDotsCriar();}
+function atualizarDotsCriar(){
+  for(let i=0;i<4;i++){const d=document.getElementById('pdc'+i);if(d)d.classList.toggle('filled',i<_pinBuffer2.length);}
+}
+
+function pinVerificarCriar(){
+  if(!_pinPrimeiroDigito2){
+    _pinPrimeiroDigito2=_pinBuffer2;_pinBuffer2='';
+    document.getElementById('criarPINSub').textContent='Confirme o PIN';
+    atualizarDotsCriar();
+  } else {
+    if(_pinBuffer2===_pinPrimeiroDigito2){
+      // PIN confirmado — salvar
+      lss('fin_pin_'+_loginUsuarioSel.id,_pinBuffer2);
+      // Marcar primeiro login como concluído no Sheets (assíncrono, não bloqueia)
+      marcarPrimeiroLoginConcluido(_loginUsuarioSel.id).catch(()=>{});
+      // Ir para definir nome
+      document.getElementById('loginNomeInput').value=_loginUsuarioSel.nome||'';
+      loginMostrarStep('loginStepNome');
+      setTimeout(()=>document.getElementById('loginNomeInput')?.select(),100);
+    } else {
+      document.getElementById('pinErroCriar').textContent='PINs não conferem. Tente novamente.';
+      _pinBuffer2='';_pinPrimeiroDigito2='';
+      document.getElementById('criarPINSub').textContent='Escolha um PIN de 4 dígitos';
+      atualizarDotsCriar();
+      setTimeout(()=>{ if(document.getElementById('pinErroCriar')) document.getElementById('pinErroCriar').textContent=''; },2500);
+    }
+  }
+}
+
+async function marcarPrimeiroLoginConcluido(userId){
+  try{
+    await fetch(CFG.scriptUrl,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'marcarPrimeiroLogin',userId,secret:CFG.secret})
+    });
+  }catch{}
+}
+
+function loginFinalizarCadastro(pular=false){
+  let nome=document.getElementById('loginNomeInput')?.value?.trim();
+  if(!pular&&nome&&nome.length>1){
+    _loginUsuarioSel.nome=nome;
+    lss('fin_nome_'+_loginUsuarioSel.id,nome);
+  }
+  loginEntrar(_loginUsuarioSel);
+}
+
 function loginEntrar(usuario){
+  // Sobrescrever nome local se tiver salvo
+  const nomeLocal=ls('fin_nome_'+usuario.id);
+  if(nomeLocal) usuario.nome=nomeLocal;
   USUARIO_ATUAL=usuario;
   sessionStorage.setItem('fin_sessao_usuario',usuario.id);
   document.getElementById('loginOv').classList.add('hidden');
   atualizarUsuarioUI();
-  // Verificar setup
   if(!CFG.sheetId||!CFG.scriptUrl){
     document.getElementById('setupOv').classList.remove('hidden');
   } else {
@@ -1513,10 +1724,12 @@ function loginEntrar(usuario){
 
 function loginSair(){
   sessionStorage.removeItem('fin_sessao_usuario');
-  USUARIO_ATUAL=null;
-  _pinBuffer='';_loginUsuarioSel=null;
+  USUARIO_ATUAL=null;_pinBuffer='';_pinBuffer2='';_loginUsuarioSel=null;
   renderLoginUsuarios();
 }
+
+// Compatibilidade: pinReset (usado em alguns lugares)
+function pinReset(){loginVoltarEmail();}
 
 function atualizarUsuarioUI(){
   if(!USUARIO_ATUAL)return;
