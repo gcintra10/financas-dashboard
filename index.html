@@ -1598,7 +1598,7 @@ async function buscarUsuariosSheets(){
 
   const resp = await fetch(url, {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+    headers: {'Content-Type': 'text/plain'},
     body: JSON.stringify({action: 'listarUsuarios', acao: 'listarUsuarios', secret})
   });
 
@@ -1708,7 +1708,7 @@ async function marcarPrimeiroLoginConcluido(userId){
   try{
     await fetch(url,{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'text/plain'},
       body:JSON.stringify({action:'marcarPrimeiroLogin',acao:'marcarPrimeiroLogin',userId,secret})
     });
   }catch(e){console.warn('[login] marcarPrimeiroLogin falhou:',e);}
@@ -3917,7 +3917,7 @@ async function enviarMsg(){
   if(cc) cc.textContent='$'+_chatCostUSD.toFixed(4);
   if(cm) cm.textContent=_chatMsgCount;
   const tid='t'+Date.now();addMsg('ai',`<span class="td"></span><span class="td"></span><span class="td"></span>`,tid);
-  try{const r=await fetch(CFG.scriptUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'chat',pergunta:pg,sheetId:CFG.sheetId,secret:CFG.secret})});const dados=await r.json();document.getElementById(tid)?.remove();addMsg('ai',dados.resposta||'Sem resposta.');}
+  try{const r=await fetch(CFG.scriptUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({acao:'chat',pergunta:pg,sheetId:CFG.sheetId,secret:CFG.secret})});const dados=await r.json();document.getElementById(tid)?.remove();addMsg('ai',dados.resposta||'Sem resposta.');}
   catch(e){document.getElementById(tid)?.remove();addMsg('ai','⚠️ Não foi possível conectar.');}
 }
 function addMsg(tipo,texto,id){const c=document.getElementById('chMs');const div=document.createElement('div');div.className='msg '+tipo;if(id)div.id=id;const av=document.createElement('div');av.className='msg-av';av.textContent=tipo==='u'?'👤':'🤖';const b=document.createElement('div');b.className='msg-b';b.innerHTML=texto;div.appendChild(av);div.appendChild(b);c.appendChild(div);c.scrollTop=c.scrollHeight;}
