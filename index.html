@@ -10,6 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 /* ══ TOKENS ══════════════════════════════════════════════ */
 :root {
@@ -90,7 +91,7 @@ input,select,textarea{font-family:var(--font)}
 .bank-card:hover{border-color:var(--ac);background:var(--ad)}
 .bank-card.selected{border-color:var(--ac);background:var(--ad)}
 .bank-card.selected::after{content:'✓';position:absolute;top:6px;right:8px;font-size:12px;font-weight:800;color:var(--ac)}
-.bank-emoji{font-size:24px;margin-bottom:6px}
+.bank-emoji{font-size:24px;margin-bottom:6px;display:flex;align-items:center;justify-content:center}
 .bank-name{font-size:12px;font-weight:700;color:var(--t2)}
 .bank-card.selected .bank-name{color:var(--ac)}
 
@@ -451,6 +452,33 @@ tbody tr:hover td{background:var(--ci)}
 .user-card-item:hover{border-color:var(--ac);background:var(--ad)}
 .user-card-item.selected{border-color:var(--ac);background:var(--ad)}
 .user-card-av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0}
+/* ══ LOGIN PIN ══════════════════════════════════════════ */
+.login-overlay{position:fixed;inset:0;z-index:4000;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
+.login-overlay.hidden{display:none}
+.login-card{background:var(--card);border:1px solid var(--b2);border-radius:28px;padding:36px 32px;max-width:380px;width:100%;box-shadow:var(--shm);text-align:center;animation:slideUp .4s var(--ease)}
+.login-logo{width:64px;height:64px;border-radius:20px;background:linear-gradient(135deg,var(--ac),var(--ac2));display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 20px;box-shadow:0 8px 24px rgba(79,70,229,.3)}
+.login-title{font-size:22px;font-weight:800;letter-spacing:-.5px;margin-bottom:6px}
+.login-sub{font-size:14px;color:var(--t2);margin-bottom:28px}
+.login-users{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
+.login-user-btn{display:flex;align-items:center;gap:14px;padding:14px 16px;border:2px solid var(--b);border-radius:var(--rs);background:var(--ci);cursor:pointer;transition:all var(--dur);text-align:left}
+.login-user-btn:hover{border-color:var(--ac);background:var(--ad)}
+.login-user-btn.selected{border-color:var(--ac);background:var(--ad)}
+.login-av{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0}
+.login-user-info{flex:1}
+.login-user-name{font-size:15px;font-weight:700}
+.login-user-desc{font-size:12px;color:var(--t2);margin-top:2px}
+.pin-wrap{display:none;margin-bottom:20px}
+.pin-label{font-size:13px;color:var(--t2);margin-bottom:12px}
+.pin-dots{display:flex;gap:10px;justify-content:center;margin-bottom:16px}
+.pin-dot{width:14px;height:14px;border-radius:50%;background:var(--b2);transition:background .2s}
+.pin-dot.filled{background:var(--ac)}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:220px;margin:0 auto}
+.pin-key{padding:14px;border-radius:var(--rs);border:1.5px solid var(--b);background:var(--ci);font-size:18px;font-weight:700;cursor:pointer;transition:all var(--dur);font-family:var(--mono)}
+.pin-key:hover{border-color:var(--ac);background:var(--ad);color:var(--ac)}
+.pin-key:active{transform:scale(.93)}
+.pin-key.del{font-size:14px;color:var(--re)}
+.pin-key.del:hover{border-color:var(--re);background:var(--rd);color:var(--re)}
+.pin-erro{color:var(--re);font-size:13px;margin-top:10px;min-height:20px}
 /* ══ IMPORTAÇÃO ═════════════════════════════════════════ */
 .imp-zone{border:2px dashed var(--b2);border-radius:var(--r);padding:40px 20px;text-align:center;cursor:pointer;transition:all var(--dur);background:var(--ci)}
 .imp-zone:hover,.imp-zone.drag{border-color:var(--ac);background:var(--ad)}
@@ -515,6 +543,32 @@ tbody tr:hover td{background:var(--ci)}
 <body>
 
 <!-- ══ ONBOARDING ══════════════════════════════════════════ -->
+<!-- ══ LOGIN ══════════════════════════════════════════════ -->
+<div class="login-overlay" id="loginOv">
+  <div class="login-card">
+    <div class="login-logo">💰</div>
+    <div class="login-title">Finanças</div>
+    <div class="login-sub">Selecione seu perfil para continuar</div>
+    <div class="login-users" id="loginUsers"></div>
+    <div class="pin-wrap" id="pinWrap">
+      <div class="pin-label" id="pinLabel">Digite seu PIN</div>
+      <div class="pin-dots" id="pinDots">
+        <div class="pin-dot" id="pd0"></div>
+        <div class="pin-dot" id="pd1"></div>
+        <div class="pin-dot" id="pd2"></div>
+        <div class="pin-dot" id="pd3"></div>
+      </div>
+      <div class="pin-pad">
+        ${[1,2,3,4,5,6,7,8,9].map(n=>`<button class="pin-key" onclick="pinDigit(${n})">${n}</button>`).join('')}
+        <button class="pin-key del" onclick="pinDel()">⌫</button>
+        <button class="pin-key" onclick="pinDigit(0)">0</button>
+        <button class="pin-key del" onclick="pinReset()">✕</button>
+      </div>
+      <div class="pin-erro" id="pinErro"></div>
+    </div>
+  </div>
+</div>
+
 <div class="ob-overlay hidden" id="obOv">
   <div class="ob-shell">
     <div class="ob-header">
@@ -585,6 +639,7 @@ tbody tr:hover td{background:var(--ci)}
       <button class="th-btn" onclick="toggleTema()"><span class="th-ic" id="thIc">☀️</span><span class="nl" id="thLb">Modo claro</span></button>
       <button class="th-btn" onclick="abrirSetup()" style="margin-bottom:6px"><span class="th-ic">⚙️</span><span class="nl">Configurações</span></button>
       <button class="th-btn" onclick="abrirOnboarding()" style="margin-bottom:6px"><span class="th-ic">✏️</span><span class="nl">Editar perfil</span></button>
+      <button class="th-btn" onclick="loginSair()" style="margin-bottom:6px"><span class="th-ic">🚪</span><span class="nl">Sair / Trocar usuário</span></button>
       <div class="sui" onclick="abrirSetup()">
         <div class="u-av" id="uAv">V</div>
         <div class="sui"><div class="u-nm" id="uNm">Você</div><div class="u-rl">Conta pessoal</div></div>
@@ -629,7 +684,58 @@ tbody tr:hover td{background:var(--ci)}
             <input type="file" id="impFileInput" accept=".csv,.pdf" multiple style="display:none" onchange="impFileSelecionado(this.files)"/>
             <div class="imp-zone-icon">📥</div>
             <div class="imp-zone-title">Arraste extratos aqui ou clique para selecionar</div>
-            <div class="imp-zone-sub">Suporte: Nubank PF/PJ (CSV) · Itaú (CSV exportado)<br>Detecta o banco automaticamente pelo nome do arquivo</div>
+            <div class="imp-zone-sub">Suporte: Nubank PF/PJ (CSV) · Banco do Brasil (CSV) · Itaú (PDF)<br>O banco é detectado automaticamente pelo nome do arquivo</div>
+          </div>
+
+          <!-- Badge de detecção do banco -->
+          <div id="impDeteccaoBadge" style="display:none;margin-top:10px;padding:10px 14px;border-radius:var(--rs);background:var(--ci);border:1px solid var(--b);font-size:13px;display:none;align-items:center;gap:10px;flex-wrap:wrap"></div>
+
+          <!-- Guia de formatos (colapsável) -->
+          <div style="margin-top:10px">
+            <button onclick="toggleGuiaImport()" id="btnGuia" style="background:none;border:none;color:var(--ac);font-size:12px;font-weight:700;cursor:pointer;padding:4px 0;display:flex;align-items:center;gap:5px">
+              <span id="guiaArrow">▶</span> Como nomear o arquivo para detecção automática
+            </button>
+            <div id="guiaImport" style="display:none;margin-top:10px;border:1px solid var(--b);border-radius:var(--rs);overflow:hidden">
+              <table style="width:100%;border-collapse:collapse;font-size:12px">
+                <thead>
+                  <tr style="background:var(--ci)">
+                    <th style="padding:8px 12px;text-align:left;color:var(--t3);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.5px">Banco</th>
+                    <th style="padding:8px 12px;text-align:left;color:var(--t3);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.5px">Formato</th>
+                    <th style="padding:8px 12px;text-align:left;color:var(--t3);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.5px">Nome do arquivo deve conter</th>
+                    <th style="padding:8px 12px;text-align:left;color:var(--t3);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.5px">Exemplo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style="border-top:1px solid var(--b)">
+                    <td style="padding:9px 12px;font-weight:700"><img src="${BANK_LOGOS.nubank}" width="18" height="18" style="border-radius:4px;vertical-align:middle;margin-right:6px"/>Nubank PF</td>
+                    <td style="padding:9px 12px;color:var(--t2)">CSV</td>
+                    <td style="padding:9px 12px"><code style="background:var(--ci);padding:2px 6px;border-radius:4px;font-size:11px;font-family:var(--mono)">[PF]</code> <code style="background:var(--ci);padding:2px 6px;border-radius:4px;font-size:11px;font-family:var(--mono)">_pf_</code> <code style="background:var(--ci);padding:2px 6px;border-radius:4px;font-size:11px;font-family:var(--mono)">-pf-</code></td>
+                    <td style="padding:9px 12px;color:var(--t3);font-size:11px;font-family:var(--mono)">nubank_jan2026[PF].csv</td>
+                  </tr>
+                  <tr style="border-top:1px solid var(--b)">
+                    <td style="padding:9px 12px;font-weight:700"><img src="${BANK_LOGOS.nubank}" width="18" height="18" style="border-radius:4px;vertical-align:middle;margin-right:6px"/>Nubank PJ</td>
+                    <td style="padding:9px 12px;color:var(--t2)">CSV</td>
+                    <td style="padding:9px 12px"><code style="background:var(--ci);padding:2px 6px;border-radius:4px;font-size:11px;font-family:var(--mono)">[PJ]</code> <code style="background:var(--ci);padding:2px 6px;border-radius:4px;font-size:11px;font-family:var(--mono)">_pj_</code> <code style="background:var(--ci);padding:2px 6px;border-radius:4px;font-size:11px;font-family:var(--mono)">-pj-</code></td>
+                    <td style="padding:9px 12px;color:var(--t3);font-size:11px;font-family:var(--mono)">nubank_jan2026[PJ].csv</td>
+                  </tr>
+                  <tr style="border-top:1px solid var(--b)">
+                    <td style="padding:9px 12px;font-weight:700"><img src="${BANK_LOGOS.itau}" width="18" height="18" style="border-radius:4px;vertical-align:middle;margin-right:6px"/>Itaú</td>
+                    <td style="padding:9px 12px;color:var(--t2)">PDF</td>
+                    <td style="padding:9px 12px"><code style="background:var(--ci);padding:2px 6px;border-radius:4px;font-size:11px;font-family:var(--mono)">itau</code> <code style="background:var(--ci);padding:2px 6px;border-radius:4px;font-size:11px;font-family:var(--mono)">itaú</code></td>
+                    <td style="padding:9px 12px;color:var(--t3);font-size:11px;font-family:var(--mono)">itau_extrato_012026.pdf</td>
+                  </tr>
+                  <tr style="border-top:1px solid var(--b)">
+                    <td style="padding:9px 12px;font-weight:700"><img src="${BANK_LOGOS.bb}" width="18" height="18" style="border-radius:4px;vertical-align:middle;margin-right:6px"/>Banco do Brasil</td>
+                    <td style="padding:9px 12px;color:var(--t2)">CSV (latin-1)</td>
+                    <td style="padding:9px 12px"><code style="background:var(--ci);padding:2px 6px;border-radius:4px;font-size:11px;font-family:var(--mono)">bb</code> <code style="background:var(--ci);padding:2px 6px;border-radius:4px;font-size:11px;font-family:var(--mono)">brasil</code> <code style="background:var(--ci);padding:2px 6px;border-radius:4px;font-size:11px;font-family:var(--mono)">extrato_conta</code></td>
+                    <td style="padding:9px 12px;color:var(--t3);font-size:11px;font-family:var(--mono)">extrato_conta_jan2026.csv</td>
+                  </tr>
+                  <tr style="border-top:1px solid var(--b);background:var(--amd)">
+                    <td colspan="4" style="padding:8px 12px;font-size:11px;color:var(--am)">⚠️ Se o arquivo não for reconhecido, um modal vai pedir para você selecionar o banco manualmente.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <!-- Progress -->
@@ -643,6 +749,21 @@ tbody tr:hover td{background:var(--ci)}
             <div class="imp-preview-title">
               <span id="impPreviewTitle">Prévia da importação</span>
               <span id="impBancoTag" style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--ad);color:var(--ac)"></span>
+            </div>
+            <!-- Fechamento e vencimento editáveis -->
+            <div id="impFechVenc" style="display:none;background:var(--ci);border:1px solid var(--b);border-radius:var(--rs);padding:12px 14px;margin-bottom:14px">
+              <div style="font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">⚙️ Configuração do cartão</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div>
+                  <label style="font-size:11px;font-weight:700;color:var(--t3);display:block;margin-bottom:4px">Dia de fechamento</label>
+                  <input type="number" id="impFechDia" min="1" max="31" style="width:100%;padding:8px 10px;background:var(--card);border:1.5px solid var(--b);border-radius:var(--rx);color:var(--t);font-size:14px;font-family:var(--mono);outline:none" onchange="impReprocessar()"/>
+                </div>
+                <div>
+                  <label style="font-size:11px;font-weight:700;color:var(--t3);display:block;margin-bottom:4px">Dia de vencimento</label>
+                  <input type="number" id="impVencDia" min="1" max="31" style="width:100%;padding:8px 10px;background:var(--card);border:1.5px solid var(--b);border-radius:var(--rx);color:var(--t);font-size:14px;font-family:var(--mono);outline:none" onchange="impReprocessar()"/>
+                </div>
+              </div>
+              <div style="font-size:11px;color:var(--t3);margin-top:6px">Altere se as datas não correspondem ao seu cartão</div>
             </div>
             <div class="imp-stats">
               <div class="imp-stat"><div class="imp-stat-val" id="impTotalTr">0</div><div class="imp-stat-lbl">Transações</div></div>
@@ -790,14 +911,35 @@ const USERS=['Você','Namorada','Irmão'];
 const PP={Necessidades:'pn',Lazer:'pl',Investimento:'pi',Reserva:'pr',Receita:'pi'};
 // Usuários do app — cada um tem sua aba de transações no Sheets
 const USUARIOS=[
-  {id:'gabriel',nome:'Gabriel',inicial:'G',cor:'linear-gradient(135deg,#4F46E5,#7C73F5)',aba:'Transações'},
-  {id:'namorada',nome:'Namorada',inicial:'N',cor:'linear-gradient(135deg,#EC4899,#F472B6)',aba:'Transações_Namorada'},
-  {id:'irmao',nome:'Irmão',inicial:'I',cor:'linear-gradient(135deg,#059669,#34D399)',aba:'Transações_Irmao'},
+  {id:'gabriel',nome:'Gabriel',emoji:'👨',inicial:'G',cor:'linear-gradient(135deg,#4F46E5,#7C73F5)',aba:'Transações',desc:'Conta principal'},
+  {id:'renata',nome:'Renata',emoji:'👩',inicial:'R',cor:'linear-gradient(135deg,#EC4899,#F472B6)',aba:'Transações_Renata',desc:'Conta pessoal'},
+  {id:'rafael',nome:'Rafael',emoji:'🧑',inicial:'R',cor:'linear-gradient(135deg,#059669,#34D399)',aba:'Transações_Rafael',desc:'Conta pessoal'},
 ];
-let USUARIO_ATUAL=null; // será carregado do localStorage
+let USUARIO_ATUAL=null;
 
 const PGINFO={visao:['Visão Geral','Resumo financeiro'],pilares:['Pilares','Modelo dos 6 pilares'],venc:['Vencimentos','Contas e cartões'],metas:['Metas','Objetivos financeiros'],estab:['Estabelecimentos','Índice'],ins:['Insights IA','Análise às 03:00'],chat:['Chat IA','Converse sobre finanças'],import:['Importar Extratos','Nubank PF/PJ · Itaú']};
-const BANKS=[{id:'nubank',nm:'Nubank',em:'💜',fc:28,vc:10,cr:'Crédito Nubank'},{id:'itau',nm:'Itaú',em:'🟠',fc:20,vc:27,cr:'Crédito Itaú'},{id:'bradesco',nm:'Bradesco',em:'🔴',fc:15,vc:22,cr:'Crédito Bradesco'},{id:'inter',nm:'Inter',em:'🟡',fc:7,vc:14,cr:'Crédito Inter'},{id:'bb',nm:'Banco do Brasil',em:'🟡',fc:5,vc:12,cr:'Crédito BB'},{id:'santander',nm:'Santander',em:'🔴',fc:10,vc:17,cr:'Crédito Santander'},{id:'xp',nm:'XP',em:'⚫',fc:15,vc:22,cr:'Crédito XP'},{id:'c6',nm:'C6 Bank',em:'⬛',fc:3,vc:10,cr:'Crédito C6'},{id:'outro',nm:'Outro',em:'🏦',fc:15,vc:22,cr:'Débito'}];
+// Logos dos bancos como SVG inline (data URIs)
+const BANK_LOGOS={
+  nubank:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iIzgyMEFEMSIgZD0iTTcuMjc5NSA1LjQzMzZjLTEuMTgxNSAwLTIuMTg0Ni40NjI4LTIuOTQzMiAxLjI1MmgtLjAwMmMtLjA1NDEtLjAwMjItLjEwNzQtLjAwMi0uMTYyLS4wMDItMS41NDM2IDAtMi45OTI1Ljg4MzUtMy42OTkgMi4yNTU5LS4zMDg4LjU5OTYtLjQyMzQgMS4yNDQyLS40NTkgMS45MDAzLS4wMzIxLjU4OSAwIDEuMTg2MyAwIDEuNzY5NnY1LjY1MjNIMy4xODRzLjAwMjItMi43ODQgMC01LjE3NzdjLS4wMDE0LTEuNjExMi0uMDExOC0zLjA0NzEgMC0zLjM0MTguMDU2LTEuMzkzNy40MzcyLTIuMzA1MyAxLjE0ODQtMy4wNTA4IDIuMzU4NS4wMDE4IDMuODg1MiAxLjYwOTEgMy45NzA1IDQuMTY4LjAxOTYuNTg3NC4wMjU0IDMuNzMwNC4wMjU0IDMuNzMwNHYzLjY3MmgzLjE2Nzh2LTQuOTY1YzAtMS41MDA3LjAxMjctMi44MDA2LS4wOTE4LTMuNjk1Mi0uMjkyLTIuNS0xLjgyMS00LjE2OC00LjEyNDgtNC4xNjh6bTguMzkwMy4zMDA4bC0zLjE2Ni4wMDM5djQuOTY0OGMwIDEuNTAwOS0uMDEyNyAyLjgwMDcuMDkxOSAzLjY5NTMuMjkyMSAyLjUwMDEgMS44MjEgNC4xNjggNC4xMjQ4IDQuMTY4IDEuMTgxNSAwIDIuMTg0Ni0uNDYyOCAyLjk0MzItMS4yNTIuMDAwMy0uMDAwMy4wMDE2LjAwMDQuMDAyIDAgLjA1NDIuMDAyMy4xMDkzLjAwMi4xNjQuMDAyIDEuNTQzNSAwIDIuOTkwNS0uODgzNSAzLjY5NzEtMi4yNTU4LjMwODgtLjU5OTcuNDIzMy0xLjI0NDIuNDU5LTEuOTAwNC4wMzItLjU4ODkgMC0xLjE4NjIgMC0xLjc2OTVWNS43MzgzSDIwLjgxNnMtLjAwMjIgMi43ODQgMCA1LjE3NzdjLjAwMTUgMS42MTEzLjAxMTkgMy4wNDcgMCAzLjM0MTgtLjA1NiAxLjM5MzUtLjQzNzIgMi4zMDUzLTEuMTQ4MyAzLjA1MDgtMi4zNTg2LS4wMDE4LTMuODg1My0xLjYwOTEtMy45NzA2LTQuMTY4LS4wMTk2LS41ODc0LS4wMjczLTIuMDQzNy0uMDI3My0zLjczMjRaIi8+PC9zdmc+',
+  itau:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiByeD0iNSIgZmlsbD0iI0VDNzAwMCIvPjx0ZXh0IHg9IjEyIiB5PSIxNyIgZm9udC1mYW1pbHk9IkFyaWFsIEJsYWNrLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI5MDAiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5pdGHDujwvdGV4dD48L3N2Zz4=',
+  bradesco:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiByeD0iNSIgZmlsbD0iI0NDMDkyRiIvPjx0ZXh0IHg9IjEyIiB5PSIxNyIgZm9udC1mYW1pbHk9IkFyaWFsIEJsYWNrLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTUiIGZvbnQtd2VpZ2h0PSI5MDAiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5CPC90ZXh0Pjwvc3ZnPg==',
+  inter:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiByeD0iMTIiIGZpbGw9IiNGRjdBMDAiLz48dGV4dCB4PSIxMiIgeT0iMTciIGZvbnQtZmFtaWx5PSJBcmlhbCBCbGFjayxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE1IiBmb250LXdlaWdodD0iOTAwIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+aTwvdGV4dD48L3N2Zz4=',
+  bb:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiByeD0iNSIgZmlsbD0iI0ZGQ0MwMCIvPjx0ZXh0IHg9IjEyIiB5PSIxNyIgZm9udC1mYW1pbHk9IkFyaWFsIEJsYWNrLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSI5MDAiIGZpbGw9IiMwMDMwODIiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkJCPC90ZXh0Pjwvc3ZnPg==',
+  santander:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiByeD0iNSIgZmlsbD0iI0VDMDAwMCIvPjx0ZXh0IHg9IjEyIiB5PSIxNyIgZm9udC1mYW1pbHk9IkFyaWFsIEJsYWNrLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTUiIGZvbnQtd2VpZ2h0PSI5MDAiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5TPC90ZXh0Pjwvc3ZnPg==',
+  xp:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiByeD0iNSIgZmlsbD0iIzFBMUExQSIvPjx0ZXh0IHg9IjEyIiB5PSIxNyIgZm9udC1mYW1pbHk9IkFyaWFsIEJsYWNrLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTEiIGZvbnQtd2VpZ2h0PSI5MDAiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5YUDwvdGV4dD48L3N2Zz4=',
+  c6:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiByeD0iNSIgZmlsbD0iIzJBMkEyQSIvPjx0ZXh0IHg9IjEyIiB5PSIxNyIgZm9udC1mYW1pbHk9IkFyaWFsIEJsYWNrLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTEiIGZvbnQtd2VpZ2h0PSI5MDAiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5DNjwvdGV4dD48L3N2Zz4=',
+  outro:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiByeD0iNSIgZmlsbD0iIzZCNzI4MCIvPjx0ZXh0IHg9IjEyIiB5PSIxNiIgZm9udC1mYW1pbHk9IkFyaWFsLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTYiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7wn4+mPC90ZXh0Pjwvc3ZnPg==',
+};
+// Helper: retorna <img> de logo de banco por id ou nome
+function bankLogo(idOrName,size=20){
+  const map={'nubank pf':'nubank','nubank pj':'nubank','banco do brasil':'bb','itaú':'itau','banco do brasil':'bb'};
+  const k=(idOrName||'').toLowerCase().replace(/\s+/g,'').replace('pf','').replace('pj','');
+  const key=map[idOrName.toLowerCase()]||k;
+  const src=BANK_LOGOS[key]||BANK_LOGOS['outro'];
+  return `<img src="${src}" width="${size}" height="${size}" style="border-radius:${size<=20?4:6}px;vertical-align:middle;flex-shrink:0" alt="${idOrName}"/>`;
+}
+
+const BANKS=[{id:'nubank',nm:'Nubank',em:'nubank',fc:28,vc:10,cr:'Crédito Nubank'},{id:'itau',nm:'Itaú',em:'itau',fc:20,vc:27,cr:'Crédito Itaú'},{id:'bradesco',nm:'Bradesco',em:'bradesco',fc:15,vc:22,cr:'Crédito Bradesco'},{id:'inter',nm:'Inter',em:'inter',fc:7,vc:14,cr:'Crédito Inter'},{id:'bb',nm:'Banco do Brasil',em:'bb',fc:5,vc:12,cr:'Crédito BB'},{id:'santander',nm:'Santander',em:'santander',fc:10,vc:17,cr:'Crédito Santander'},{id:'xp',nm:'XP',em:'xp',fc:15,vc:22,cr:'Crédito XP'},{id:'c6',nm:'C6 Bank',em:'c6',fc:3,vc:10,cr:'Crédito C6'},{id:'outro',nm:'Outro',em:'outro',fc:15,vc:22,cr:'Débito'}];
 
 let CFG={sheetId:ls('fin_sheetId')||'',scriptUrl:ls('fin_scriptUrl')||'',secret:ls('fin_secret')||'',userName:ls('fin_userName')||'Você'};
 let ST={mesIdx:new Date().getMonth(),ano:new Date().getFullYear(),dados:null,sbCol:ls('fin_sb')==='1',viewMode:'mes'};
@@ -812,10 +954,15 @@ window.addEventListener('DOMContentLoaded',()=>{
   const v=ls('fin_versao');
   if(v&&v!==VRS){lss('fin_versao',VRS);location.reload(true);}
   lss('fin_versao',VRS);
-  // Carregar usuário atual
-  const userId=ls('fin_usuario')||'gabriel';
-  USUARIO_ATUAL=USUARIOS.find(u=>u.id===userId)||USUARIOS[0];
-  atualizarUsuarioUI();
+  // Verificar se já está logado nessa sessão
+  const sessaoUsuario=sessionStorage.getItem('fin_sessao_usuario');
+  if(sessaoUsuario){
+    USUARIO_ATUAL=USUARIOS.find(u=>u.id===sessaoUsuario)||USUARIOS[0];
+    atualizarUsuarioUI();
+  } else {
+    // Mostrar tela de login
+    renderLoginUsuarios();
+  }
 
   const tema=ls('fin_tema')||'light';
   document.documentElement.setAttribute('data-theme',tema);
@@ -994,7 +1141,7 @@ function obStep0(){
 function obStep1(){
   const sel=OB.bancos.map(b=>b.id);
   let html=`<div class="bank-grid">${BANKS.map(b=>`<div class="bank-card ${sel.includes(b.id)?'selected':''}" onclick="toggleBank('${b.id}')">
-    <div class="bank-emoji">${b.em}</div><div class="bank-name">${b.nm}</div>
+    <div class="bank-emoji">${bankLogo(b.id,28)}</div><div class="bank-name">${b.nm}</div>
   </div>`).join('')}</div>`;
   if(OB.bancos.length>0){
     html+=`<div style="font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;margin-top:4px">Configure cada cartão</div>`;
@@ -1261,6 +1408,116 @@ function navPorId(id){
   fecharMob();
 }
 // ══ SISTEMA DE USUÁRIOS ═════════════════════════════════════
+// ══ LOGIN PIN ═══════════════════════════════════════════════
+function renderLoginUsuarios(){
+  document.getElementById('loginOv').classList.remove('hidden');
+  const cont=document.getElementById('loginUsers');
+  if(!cont) return;
+  cont.innerHTML=USUARIOS.map(u=>`
+    <button class="login-user-btn" onclick="loginSelecionarUsuario('${u.id}')" id="lbu_${u.id}">
+      <div class="login-av" style="background:${u.cor}">${u.emoji}</div>
+      <div class="login-user-info">
+        <div class="login-user-name">${u.nome}</div>
+        <div class="login-user-desc">${u.desc}</div>
+      </div>
+      <span style="font-size:18px;color:var(--t3)">›</span>
+    </button>`).join('');
+}
+
+function loginSelecionarUsuario(id){
+  _loginUsuarioSel=USUARIOS.find(u=>u.id===id);
+  document.querySelectorAll('.login-user-btn').forEach(b=>b.classList.remove('selected'));
+  document.getElementById('lbu_'+id)?.classList.add('selected');
+  // Verificar se tem PIN configurado
+  const pin=ls('fin_pin_'+id);
+  if(!pin){
+    // Primeiro acesso — pede para criar PIN
+    document.getElementById('pinLabel').textContent='Crie um PIN de 4 dígitos';
+    _pinBuffer='';_pinCriando=true;_pinPrimeiroDigito='';
+    document.getElementById('pinWrap').style.display='block';
+    atualizarDots();
+  } else {
+    document.getElementById('pinLabel').textContent='Digite seu PIN, '+_loginUsuarioSel.nome;
+    _pinBuffer='';_pinCriando=false;
+    document.getElementById('pinWrap').style.display='block';
+    atualizarDots();
+  }
+  document.getElementById('pinErro').textContent='';
+}
+
+let _pinCriando=false,_pinPrimeiroDigito='';
+
+function pinDigit(n){
+  if(_pinBuffer.length>=4) return;
+  _pinBuffer+=n;
+  atualizarDots();
+  if(_pinBuffer.length===4) setTimeout(pinVerificar,200);
+}
+function pinDel(){_pinBuffer=_pinBuffer.slice(0,-1);atualizarDots();}
+function pinReset(){_pinBuffer='';_pinCriando=false;_pinPrimeiroDigito='';document.getElementById('pinWrap').style.display='none';document.querySelectorAll('.login-user-btn').forEach(b=>b.classList.remove('selected'));}
+function atualizarDots(){
+  for(let i=0;i<4;i++){
+    const d=document.getElementById('pd'+i);
+    if(d) d.classList.toggle('filled',i<_pinBuffer.length);
+  }
+}
+
+function pinVerificar(){
+  const id=_loginUsuarioSel?.id;
+  if(!id) return;
+  if(_pinCriando){
+    // Criando PIN novo
+    if(!_pinPrimeiroDigito){
+      _pinPrimeiroDigito=_pinBuffer;_pinBuffer='';
+      document.getElementById('pinLabel').textContent='Confirme o PIN';
+      atualizarDots();
+    } else {
+      if(_pinBuffer===_pinPrimeiroDigito){
+        lss('fin_pin_'+id,_pinBuffer);
+        loginEntrar(_loginUsuarioSel);
+      } else {
+        document.getElementById('pinErro').textContent='PINs não conferem. Tente novamente.';
+        _pinBuffer='';_pinPrimeiroDigito='';
+        document.getElementById('pinLabel').textContent='Crie um PIN de 4 dígitos';
+        atualizarDots();
+      }
+    }
+    return;
+  }
+  // Verificando PIN existente
+  const pinSalvo=ls('fin_pin_'+id);
+  if(_pinBuffer===pinSalvo){
+    loginEntrar(_loginUsuarioSel);
+  } else {
+    document.getElementById('pinErro').textContent='PIN incorreto. Tente novamente.';
+    _pinBuffer='';
+    atualizarDots();
+    setTimeout(()=>document.getElementById('pinErro').textContent='',2000);
+  }
+}
+
+function loginEntrar(usuario){
+  USUARIO_ATUAL=usuario;
+  sessionStorage.setItem('fin_sessao_usuario',usuario.id);
+  document.getElementById('loginOv').classList.add('hidden');
+  atualizarUsuarioUI();
+  // Verificar setup
+  if(!CFG.sheetId||!CFG.scriptUrl){
+    document.getElementById('setupOv').classList.remove('hidden');
+  } else {
+    const obDone=ls('fin_ob_done');
+    if(!obDone) abrirOnboarding();
+    else carregarDados();
+  }
+}
+
+function loginSair(){
+  sessionStorage.removeItem('fin_sessao_usuario');
+  USUARIO_ATUAL=null;
+  _pinBuffer='';_loginUsuarioSel=null;
+  renderLoginUsuarios();
+}
+
 function atualizarUsuarioUI(){
   if(!USUARIO_ATUAL)return;
   const u=USUARIO_ATUAL;
@@ -1875,23 +2132,41 @@ function rVisao(){
     </div>
     <div id="filtrosPanel" style="display:none;padding:0 16px 14px;display:none">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-        <input id="fDesc" type="text" placeholder="🔍 Buscar descrição..." oninput="filtrarTrans()" style="background:var(--ci);border:1px solid var(--b);border-radius:var(--rx);padding:7px 10px;color:var(--t);font-size:12px;outline:none;font-family:var(--font)"/>
-        <select id="fCat" onchange="filtrarTrans()" style="background:var(--ci);border:1px solid var(--b);border-radius:var(--rx);padding:7px 10px;color:var(--t2);font-size:12px;outline:none;font-family:var(--font)">
-          <option value="">📂 Todas categorias</option>
-        </select>
+        <div style="position:relative;display:flex;align-items:center">
+          <input id="fDesc" type="text" placeholder="🔍 Buscar descrição..." oninput="filtrarTrans();atualizarBtnLimpar('fDesc','xDesc')" style="width:100%;background:var(--ci);border:1px solid var(--b);border-radius:var(--rx);padding:7px 28px 7px 10px;color:var(--t);font-size:12px;outline:none;font-family:var(--font)"/>
+          <button id="xDesc" onclick="limparFiltro('fDesc','xDesc','input')" style="display:none;position:absolute;right:6px;background:none;border:none;color:var(--t3);font-size:14px;line-height:1;padding:2px 4px;cursor:pointer;border-radius:4px" title="Limpar">✕</button>
+        </div>
+        <div style="position:relative;display:flex;align-items:center">
+          <select id="fCat" onchange="filtrarTrans();atualizarBtnLimpar('fCat','xCat')" style="width:100%;background:var(--ci);border:1px solid var(--b);border-radius:var(--rx);padding:7px 28px 7px 10px;color:var(--t2);font-size:12px;outline:none;font-family:var(--font);appearance:none">
+            <option value="">📂 Todas categorias</option>
+          </select>
+          <button id="xCat" onclick="limparFiltro('fCat','xCat','select')" style="display:none;position:absolute;right:6px;background:none;border:none;color:var(--t3);font-size:14px;line-height:1;padding:2px 4px;cursor:pointer;border-radius:4px" title="Limpar">✕</button>
+        </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-        <select id="fMeio" onchange="filtrarTrans()" style="background:var(--ci);border:1px solid var(--b);border-radius:var(--rx);padding:7px 10px;color:var(--t2);font-size:12px;outline:none;font-family:var(--font)">
-          <option value="">💳 Todos os meios</option>
-        </select>
-        <div style="display:flex;gap:4px">
-          <input id="fValMin" type="number" placeholder="R$ mín" oninput="filtrarTrans()" style="width:100%;background:var(--ci);border:1px solid var(--b);border-radius:var(--rx);padding:7px 8px;color:var(--t);font-size:12px;outline:none;font-family:var(--font)"/>
-          <input id="fValMax" type="number" placeholder="R$ máx" oninput="filtrarTrans()" style="width:100%;background:var(--ci);border:1px solid var(--b);border-radius:var(--rx);padding:7px 8px;color:var(--t);font-size:12px;outline:none;font-family:var(--font)"/>
+        <div style="position:relative;display:flex;align-items:center">
+          <select id="fMeio" onchange="filtrarTrans();atualizarBtnLimpar('fMeio','xMeio')" style="width:100%;background:var(--ci);border:1px solid var(--b);border-radius:var(--rx);padding:7px 28px 7px 10px;color:var(--t2);font-size:12px;outline:none;font-family:var(--font);appearance:none">
+            <option value="">💳 Todos os meios</option>
+          </select>
+          <button id="xMeio" onclick="limparFiltro('fMeio','xMeio','select')" style="display:none;position:absolute;right:6px;background:none;border:none;color:var(--t3);font-size:14px;line-height:1;padding:2px 4px;cursor:pointer;border-radius:4px" title="Limpar">✕</button>
         </div>
-        <select id="fDia" onchange="filtrarTrans()" style="background:var(--ci);border:1px solid var(--b);border-radius:var(--rx);padding:7px 10px;color:var(--t2);font-size:12px;outline:none;font-family:var(--font)">
-          <option value="">📅 Todos os dias</option>
-          ${Array.from({length:31},(_,i)=>`<option value="${i+1}">Dia ${i+1}</option>`).join('')}
-        </select>
+        <div style="display:flex;gap:4px">
+          <div style="position:relative;flex:1;display:flex;align-items:center">
+            <input id="fValMin" type="number" placeholder="R$ mín" oninput="filtrarTrans();atualizarBtnLimpar('fValMin','xValMin')" style="width:100%;background:var(--ci);border:1px solid var(--b);border-radius:var(--rx);padding:7px 22px 7px 8px;color:var(--t);font-size:12px;outline:none;font-family:var(--font)"/>
+            <button id="xValMin" onclick="limparFiltro('fValMin','xValMin','input')" style="display:none;position:absolute;right:4px;background:none;border:none;color:var(--t3);font-size:12px;line-height:1;padding:2px 3px;cursor:pointer;border-radius:4px" title="Limpar">✕</button>
+          </div>
+          <div style="position:relative;flex:1;display:flex;align-items:center">
+            <input id="fValMax" type="number" placeholder="R$ máx" oninput="filtrarTrans();atualizarBtnLimpar('fValMax','xValMax')" style="width:100%;background:var(--ci);border:1px solid var(--b);border-radius:var(--rx);padding:7px 22px 7px 8px;color:var(--t);font-size:12px;outline:none;font-family:var(--font)"/>
+            <button id="xValMax" onclick="limparFiltro('fValMax','xValMax','input')" style="display:none;position:absolute;right:4px;background:none;border:none;color:var(--t3);font-size:12px;line-height:1;padding:2px 3px;cursor:pointer;border-radius:4px" title="Limpar">✕</button>
+          </div>
+        </div>
+        <div style="position:relative;display:flex;align-items:center">
+          <select id="fDia" onchange="filtrarTrans();atualizarBtnLimpar('fDia','xDia')" style="width:100%;background:var(--ci);border:1px solid var(--b);border-radius:var(--rx);padding:7px 28px 7px 10px;color:var(--t2);font-size:12px;outline:none;font-family:var(--font);appearance:none">
+            <option value="">📅 Todos os dias</option>
+            ${Array.from({length:31},(_,i)=>`<option value="${i+1}">Dia ${i+1}</option>`).join('')}
+          </select>
+          <button id="xDia" onclick="limparFiltro('fDia','xDia','select')" style="display:none;position:absolute;right:6px;background:none;border:none;color:var(--t3);font-size:14px;line-height:1;padding:2px 4px;cursor:pointer;border-radius:4px" title="Limpar">✕</button>
+        </div>
       </div>
     </div>
     <div class="tw">
@@ -2403,13 +2678,190 @@ function impDeveIgnorar(titulo, valor){
 // Detectar banco pelo nome do arquivo
 function impDetectarBanco(nomeArquivo){
   const n=nomeArquivo.toLowerCase();
-  // Detectar por padrões no nome do arquivo
-  if(n.includes('[pf]')||n.includes('_pf_')||n.includes('-pf-')) return{banco:'Nubank PF',meio:'Crédito Nubank PF',tipo:'nubank',fech:28,detectado:true};
-  if(n.includes('[pj]')||n.includes('_pj_')||n.includes('-pj-')) return{banco:'Nubank PJ',meio:'Crédito Nubank PJ',tipo:'nubank',fech:28,detectado:true};
-  if(n.includes('itau')||n.includes('itaú')) return{banco:'Itaú',meio:'Débito',tipo:'itau',fech:0,detectado:true};
-  if(n.includes('nubank')||n.includes('nu_')) return{banco:'Nubank',meio:'Crédito Nubank PF',tipo:'nubank',fech:28,detectado:false};
-  // Tentar detectar pelo conteúdo (será tentado depois)
-  return{banco:'',meio:'',tipo:'desconhecido',fech:28,detectado:false};
+  if(n.includes('[pf]')||n.includes('_pf_')||n.includes('-pf-')) return{banco:'Nubank PF',meio:'Crédito Nubank PF',tipo:'nubank',fech:28,vc:5,detectado:true};
+  if(n.includes('[pj]')||n.includes('_pj_')||n.includes('-pj-')) return{banco:'Nubank PJ',meio:'Crédito Nubank PJ',tipo:'nubank',fech:28,vc:10,detectado:true};
+  if(n.includes('itau')||n.includes('itaú')) return{banco:'Itaú',meio:'Débito',tipo:'itau_pdf',fech:0,vc:0,detectado:true};
+  if(n.includes('bb')||n.includes('brasil')||n.includes('extrato_conta')) return{banco:'Banco do Brasil',meio:'Débito BB',tipo:'bb',fech:0,vc:0,detectado:true};
+  if(n.includes('bradesco')) return{banco:'Bradesco',meio:'Crédito Bradesco',tipo:'nubank',fech:15,vc:22,detectado:true};
+  if(n.includes('santander')) return{banco:'Santander',meio:'Crédito Santander',tipo:'nubank',fech:10,vc:17,detectado:true};
+  if(n.includes('inter')) return{banco:'Inter',meio:'Crédito Inter',tipo:'nubank',fech:7,vc:14,detectado:true};
+  if(n.includes('nubank')||n.includes('nu_')) return{banco:'Nubank',meio:'Crédito Nubank PF',tipo:'nubank',fech:28,vc:5,detectado:false};
+  return{banco:'',meio:'',tipo:'desconhecido',fech:28,vc:5,detectado:false};
+}
+
+// ── PARSER ITAÚ PDF ──────────────────────────────────────────
+// Inicializar pdfjs worker
+function initPdfJs(){
+  if(window.pdfjsLib&&!window.pdfjsLib.GlobalWorkerOptions.workerSrc){
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+}
+
+async function impParseItauPDF(file, bancoCfg){
+  initPdfJs();
+  const buf=await file.arrayBuffer();
+  const pdf=await window.pdfjsLib.getDocument({data:buf}).promise;
+  let textoCompleto='';
+  for(let p=1;p<=pdf.numPages;p++){
+    const pg=await pdf.getPage(p);
+    const tc=await pg.getTextContent();
+    // Juntar items em ordem, inserindo newline quando Y muda muito
+    let lastY=null,linha='';
+    const itens=tc.items.sort((a,b)=>{ // ordenar por Y desc, depois X asc
+      const dy=b.transform[5]-a.transform[5];
+      if(Math.abs(dy)>2)return dy;
+      return a.transform[4]-b.transform[4];
+    });
+    for(const item of itens){
+      const y=Math.round(item.transform[5]);
+      if(lastY!==null&&Math.abs(y-lastY)>4){textoCompleto+=linha.trim()+'\n';linha='';}
+      linha+=(linha?'\t':'')+item.str;
+      lastY=y;
+    }
+    if(linha.trim())textoCompleto+=linha.trim()+'\n';
+  }
+  return impParseItauTexto(textoCompleto, bancoCfg);
+}
+
+function impParseItauTexto(texto, bancoCfg){
+  const rows=[];
+  const mc=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const linhas=texto.split('\n');
+  // Regex para linha de transação: dd/mm/yyyy + descrição + valor (−xxx,xx ou xxx,xx)
+  // Exemplos do extrato real:
+  //   22/04/2026  PIX QRS IFOOD.COM A21/04  -12,90
+  //   01/04/2026  PAGTO SALARIO  6.670,86
+  const reData=/^(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+([-−]?\d{1,3}(?:\.\d{3})*,\d{2})\s*$/;
+
+  // Lista de lançamentos a IGNORAR
+  const ignore=[
+    'saldo do dia','rend pago aplic','saldo anterior',
+    '51.276',          // PIX para conta PJ própria
+    'gabriel cintra',  // pagamentos para si mesmo
+    'rafael',          // transferência para irmão (se quiser trackear, remover)
+  ];
+  // Lista de lançamentos que são RECEITA
+  const receita=['pagto salario','salario','receita','pix transf renata','deposito'];
+
+  for(const linha of linhas){
+    const m=linha.match(reData);
+    if(!m)continue;
+    const [,dataStr,descRaw,valorStr]=m;
+    const desc=descRaw.trim();
+    const tl=desc.toLowerCase();
+
+    // Ignorar internos
+    if(ignore.some(ig=>tl.includes(ig)))continue;
+
+    // Parsear valor (suporta −/-)
+    const vStr=valorStr.replace('−','-').replace(/\./g,'').replace(',','.');
+    const valor=parseFloat(vStr);
+    if(isNaN(valor)||valor===0)continue;
+
+    const isReceita=valor>0||receita.some(r=>tl.includes(r));
+
+    // Data → ISO para cálculos
+    const [dd,mm,yyyy]=dataStr.split('/');
+    const dataISO=`${yyyy}-${mm}-${dd}`;
+    const dataFmt=dataStr; // DD/MM/YYYY
+
+    const cls=impClassificar(desc);
+    const mesStr=impMesDireto(dataISO);
+
+    rows.push({
+      data:dataFmt,
+      desc,
+      valor:isReceita?Math.abs(valor):-Math.abs(valor),
+      tipo:isReceita?'Receita':'Despesa',
+      pilar:isReceita?'Receita':cls.pilar,
+      cat:isReceita?'Salário/Receita':cls.cat,
+      meio:bancoCfg.meio,
+      banco:bancoCfg.banco,
+      mes:mesStr,
+      obs:'Importado Itaú PDF',
+    });
+  }
+  return rows;
+}
+
+// ── impReprocessar: reaplica mês de fatura ao mudar fechamento/vencimento ──
+function impReprocessar(){
+  if(!_impDados||_impDados.length===0)return;
+  const fechDia=parseInt(document.getElementById('impFechDia')?.value||28)||28;
+  // Reclassificar mês de fatura com novo fechamento
+  _impDados=_impDados.map(row=>{
+    // Só recalcula para cartões (não débito)
+    if(row.obs&&(row.obs.includes('Nubank')||row.obs.includes('Parcela'))){
+      // extrair data original em ISO a partir do formato DD/MM/YYYY
+      try{
+        const parts=row.data.split('/');
+        if(parts.length===3){
+          const iso=`${parts[2]}-${parts[1]}-${parts[0]}`;
+          row.mes=impMesFatura(iso,fechDia);
+        }
+      }catch{}
+    }
+    return row;
+  });
+  impMostrarPreview();
+}
+
+// Parse CSV Banco do Brasil
+// Formato: "Data","Lançamento","Detalhes","N° documento","Valor","Tipo Lançamento"
+// Encoding: latin-1 (tratado no FileReader)
+function impParseBB(csvText, bancoCfg){
+  const rows=[];
+  const lines=csvText.trim().split('\n').filter(l=>l.trim());
+  const inicio=lines[0].toLowerCase().includes('data')?1:0;
+  for(let i=inicio;i<lines.length;i++){
+    // Parse CSV com aspas
+    const cols=[];let d=false,v='';
+    for(const c of lines[i]){if(c==='"'){d=!d;}else if(c===','&&!d){cols.push(v.trim());v='';}else v+=c;}
+    cols.push(v.trim());
+    if(cols.length<6) continue;
+    const data=cols[0],lanc=cols[1],det=cols[2],valor=cols[4],tipo=cols[5];
+    if(!data||!tipo||data==='00/00/0000') continue;
+    if(tipo!=='Entrada'&&tipo!=='Saída') continue;
+    // Ignorar internos
+    const descRaw=(det||lanc).trim();
+    const internos=['saldo','pagto cartão','pagamento de cartão'];
+    if(internos.some(ig=>descRaw.toLowerCase().includes(ig))) continue;
+    // Extrair descrição real do campo Detalhes
+    // Formato: "DD/MM HH:MM NOME DO ESTABELECIMENTO"
+    let desc=descRaw.replace(/^\d{2}\/\d{2}\s+\d{2}:\d{2}\s+/,'').trim()||lanc;
+    // Valor: formato "1.234,56" ou "-1.234,56"
+    const valorNum=parseFloat(valor.replace(/\./g,'').replace(',','.'));
+    if(isNaN(valorNum)||valorNum===0) continue;
+    const isEntrada=tipo==='Entrada'||valorNum>0;
+    if(impDeveIgnorar(desc,isEntrada?-1:1)) continue;
+    const cls=impClassificar(desc);
+    // Data no formato DD/MM/YYYY
+    const parts=data.split('/');
+    const dataISO=parts.length===3?`${parts[2]}-${parts[1]}-${parts[0]}`:data;
+    const dataFmt=data; // já está DD/MM/YYYY
+    rows.push({
+      data:dataFmt,
+      desc,
+      valor:isEntrada?Math.abs(valorNum):-Math.abs(valorNum),
+      tipo:isEntrada?'Receita':'Despesa',
+      pilar:isEntrada?'Receita':cls.pilar,
+      cat:isEntrada?'Outros':cls.cat,
+      meio:bancoCfg.meio,
+      banco:bancoCfg.banco,
+      mes:isEntrada?impMesDireto(dataISO):impMesDireto(dataISO),
+      obs:'Importado BB',
+    });
+  }
+  return rows;
+}
+
+// Mês direto (débito/conta corrente — não tem fatura)
+function impMesDireto(dataISO){
+  try{
+    const d=new Date(dataISO+'T12:00:00');
+    const mc=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    return mc[d.getMonth()]+'/'+d.getFullYear();
+  }catch{return '';}
 }
 
 // Parse CSV Nubank
@@ -2447,6 +2899,56 @@ let _impExistentes=[];
 function impDrag(e,over){e.preventDefault();document.getElementById('impZone').classList.toggle('drag',over);}
 function impDrop(e){e.preventDefault();document.getElementById('impZone').classList.remove('drag');impFileSelecionado(e.dataTransfer.files);}
 
+function toggleGuiaImport(){
+  const el=document.getElementById('guiaImport');
+  const ar=document.getElementById('guiaArrow');
+  if(!el)return;
+  const open=el.style.display==='none'||el.style.display==='';
+  el.style.display=open?'block':'none';
+  if(ar)ar.textContent=open?'▼':'▶';
+}
+
+// Mostrar badge de detecção antes de processar
+function impMostrarDeteccao(lista){
+  const badge=document.getElementById('impDeteccaoBadge');
+  if(!badge)return;
+  const INFOS={
+    'nubank':  {cor:'#820AD1',bg:'rgba(130,10,209,.08)',key:'nubank'},
+    'bb':      {cor:'#003082',bg:'rgba(255,204,0,.15)',key:'bb'},
+    'itau_pdf':{cor:'#EC7000',bg:'rgba(236,112,0,.08)',key:'itau'},
+    'desconhecido':{cor:'var(--am)',bg:'var(--amd)',key:'outro'},
+  };
+  const chips=lista.map(({file,bancoCfg})=>{
+    const info=INFOS[bancoCfg.tipo]||INFOS['desconhecido'];
+    const fmt=bancoCfg.tipo==='itau_pdf'?'PDF':'CSV';
+    const logo=`<img src="${BANK_LOGOS[info.key]||BANK_LOGOS.outro}" width="18" height="18" style="border-radius:4px;vertical-align:middle;flex-shrink:0"/>`;
+    const status=bancoCfg.detectado
+      ?`<span style="display:flex;align-items:center;gap:5px;color:${info.cor};font-weight:700">${logo} ${bancoCfg.banco} (${fmt})</span>`
+      :`<span style="color:var(--am);font-weight:700">❓ ${file.name} — não reconhecido</span>`;
+    return `<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;background:${info.bg};border-radius:6px;font-size:12px;flex-wrap:wrap">
+      ${status}
+      <span style="color:var(--t3);font-size:11px">${file.name}</span>
+    </div>`;
+  }).join('');
+  badge.style.display='flex';
+  badge.innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;width:100%">Detectado:</div>${chips}`;
+}
+
+// Validar conteúdo do arquivo vs banco esperado
+function impValidarConteudo(text,bancoCfg){
+  if(bancoCfg.tipo==='nubank'){
+    if(!text.toLowerCase().includes('date,title,amount')&&!text.toLowerCase().includes('data,descricao,valor')){
+      return{ok:false,msg:`O arquivo não parece ser um CSV do Nubank. Esperado: cabeçalho "date,title,amount". Verifique se exportou corretamente no app.`};
+    }
+  }
+  if(bancoCfg.tipo==='bb'){
+    if(!text.toLowerCase().includes('lançamento')&&!text.toLowerCase().includes('lancamento')&&!text.toLowerCase().includes('tipo lançamento')){
+      return{ok:false,msg:`O arquivo não parece ser um extrato do Banco do Brasil. Esperado: colunas "Lançamento" e "Tipo Lançamento". Exporte pelo internet banking do BB.`};
+    }
+  }
+  return{ok:true};
+}
+
 let _pendentesSelecao=[];
 
 async function impFileSelecionado(files){
@@ -2466,6 +2968,9 @@ async function impFileSelecionado(files){
       processa.push({file,bancoCfg});
     }
   }
+
+  // Mostrar badge de detecção para os reconhecidos
+  if(processa.length>0) impMostrarDeteccao(processa);
 
   if(precisaSelecao.length>0){
     // Mostrar modal de seleção para os não detectados
@@ -2496,20 +3001,48 @@ function impAbrirSelecaoBanco(lista){
     document.body.appendChild(div);
   }
   const lista2=document.getElementById('impBancoLista');
+  const bancOpts=[
+    {val:'pf',  label:'Nubank PF',  sub:'CSV · pessoa física', key:'nubank'},
+    {val:'pj',  label:'Nubank PJ',  sub:'CSV · pessoa jurídica', key:'nubank'},
+    {val:'itau_pdf',label:'Itaú',   sub:'PDF · extrato conta', key:'itau'},
+    {val:'bb',  label:'Banco do Brasil', sub:'CSV · latin-1', key:'bb'},
+    {val:'bradesco',label:'Bradesco',sub:'CSV', key:'bradesco'},
+    {val:'santander',label:'Santander',sub:'CSV', key:'santander'},
+    {val:'inter',label:'Inter',     sub:'CSV', key:'inter'},
+    {val:'outro',label:'Outro',     sub:'genérico', key:'outro'},
+  ];
   if(lista2) lista2.innerHTML=lista.map((item,i)=>`
-    <div style="margin-bottom:14px">
-      <div style="font-size:12px;color:var(--t3);margin-bottom:5px;font-weight:600">📄 ${item.file.name}</div>
-      <select id="bancoSel_${i}" style="width:100%;padding:9px 12px;background:var(--ci);border:1.5px solid var(--b);border-radius:var(--rs);color:var(--t);font-size:14px;outline:none;font-family:var(--font)">
-        <option value="">Selecione o banco...</option>
-        <option value="pf">Nubank PF (conta pessoa física)</option>
-        <option value="pj">Nubank PJ (conta pessoa jurídica)</option>
-        <option value="itau">Itaú (débito)</option>
-        <option value="outro">Outro (genérico)</option>
-      </select>
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;color:var(--t3);margin-bottom:8px;font-weight:600;display:flex;align-items:center;gap:5px">📄 ${item.file.name}</div>
+      <input type="hidden" id="bancoSel_${i}" value=""/>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px" id="bancoPicker_${i}">
+        ${bancOpts.map(o=>`
+          <div onclick="selBanco(${i},'${o.val}',this)" data-val="${o.val}"
+            style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1.5px solid var(--b);border-radius:var(--rs);cursor:pointer;transition:all .15s;background:var(--ci)">
+            <img src="${BANK_LOGOS[o.key]||BANK_LOGOS.outro}" width="20" height="20" style="border-radius:4px;flex-shrink:0"/>
+            <div>
+              <div style="font-size:12px;font-weight:700;color:var(--t);line-height:1.2">${o.label}</div>
+              <div style="font-size:10px;color:var(--t3)">${o.sub}</div>
+            </div>
+          </div>`).join('')}
+      </div>
     </div>
   `).join('');
   // Guardar a lista de arquivos pendentes
   window._impPendentes=lista;
+}
+
+function selBanco(i,val,el){
+  document.getElementById('bancoSel_'+i).value=val;
+  // highlight selecionado
+  const picker=document.getElementById('bancoPicker_'+i);
+  if(picker){
+    picker.querySelectorAll('[data-val]').forEach(d=>{
+      const sel=d.dataset.val===val;
+      d.style.borderColor=sel?'var(--ac)':'var(--b)';
+      d.style.background=sel?'var(--ad)':'var(--ci)';
+    });
+  }
 }
 
 async function impConfirmarSelecaoBanco(){
@@ -2521,7 +3054,12 @@ async function impConfirmarSelecaoBanco(){
     const bancos={
       pf:{banco:'Nubank PF',meio:'Crédito Nubank PF',tipo:'nubank',fech:28,detectado:true},
       pj:{banco:'Nubank PJ',meio:'Crédito Nubank PJ',tipo:'nubank',fech:28,detectado:true},
-      itau:{banco:'Itaú',meio:'Débito',tipo:'itau',fech:0,detectado:true},
+      itau:{banco:'Itaú',meio:'Débito',tipo:'itau_pdf',fech:0,detectado:true},
+      itau_pdf:{banco:'Itaú',meio:'Débito',tipo:'itau_pdf',fech:0,detectado:true},
+      bb:{banco:'Banco do Brasil',meio:'Débito BB',tipo:'bb',fech:0,detectado:true},
+      bradesco:{banco:'Bradesco',meio:'Crédito Bradesco',tipo:'nubank',fech:15,vc:22,detectado:true},
+      santander:{banco:'Santander',meio:'Crédito Santander',tipo:'nubank',fech:10,vc:17,detectado:true},
+      inter:{banco:'Inter',meio:'Crédito Inter',tipo:'nubank',fech:7,vc:14,detectado:true},
       outro:{banco:'Outro',meio:'Débito',tipo:'nubank',fech:28,detectado:true},
     };
     confirmados.push({file:lista[i].file,bancoCfg:bancos[sel]});
@@ -2537,15 +3075,32 @@ async function impProcessarArquivos(lista){
   for(let i=0;i<lista.length;i++){
     const {file,bancoCfg}=lista[i];
     impShowProgress(true,`Processando ${file.name}...`,10+((i+1)/lista.length*60));
-    const text=await file.text();
+    // BB usa encoding latin-1 — ler como latin-1
+    let text;
+    if(bancoCfg.tipo==='bb'){
+      const buf=await file.arrayBuffer();
+      text=new TextDecoder('iso-8859-1').decode(buf);
+    } else {
+      text=await file.text();
+    }
     let rows=[];
-    if(bancoCfg.tipo==='nubank') rows=impParseNubank(text,bancoCfg);
+    if(bancoCfg.tipo==='nubank'){
+      const v=impValidarConteudo(text,bancoCfg);
+      if(!v.ok){impShowProgress(false,'',0);alert('⚠️ '+v.msg);return;}
+      rows=impParseNubank(text,bancoCfg);
+    }
+    else if(bancoCfg.tipo==='bb'){
+      const v=impValidarConteudo(text,bancoCfg);
+      if(!v.ok){impShowProgress(false,'',0);alert('⚠️ '+v.msg);return;}
+      rows=impParseBB(text,bancoCfg);
+    }
+    else if(bancoCfg.tipo==='itau_pdf') rows=await impParseItauPDF(file,bancoCfg);
     _impDados.push(...rows);
   }
 
   if(_impDados.length===0){
     impShowProgress(false,'',0);
-    alert('Nenhuma transação encontrada. Verifique se o arquivo é um CSV do Nubank.');
+    alert('Nenhuma transação encontrada. Verifique se o arquivo é um CSV do Nubank/BB ou um PDF do Itaú com o nome contendo "itau".');
     return;
   }
 
@@ -2726,6 +3281,8 @@ function impReset(){
   document.getElementById('impFileInput').value='';
   document.getElementById('impPreview').style.display='none';
   document.getElementById('impResult').style.display='none';
+  const badge=document.getElementById('impDeteccaoBadge');
+  if(badge)badge.style.display='none';
   impShowProgress(false,'',0);
 }
 
@@ -2892,6 +3449,22 @@ function filtrarTrans(){
   const cnt=document.getElementById('trCount');
   if(body) body.innerHTML=renderTransRows(filtradas);
   if(cnt) cnt.textContent=`(${filtradas.length} de ${ST.dados.ultTr.length})`;
+}
+function atualizarBtnLimpar(inputId,btnId){
+  const el=document.getElementById(inputId);
+  const btn=document.getElementById(btnId);
+  if(!el||!btn)return;
+  const temValor=el.tagName==='SELECT'?el.value!=='':el.value!=='';
+  btn.style.display=temValor?'block':'none';
+}
+function limparFiltro(inputId,btnId,tipo){
+  const el=document.getElementById(inputId);
+  const btn=document.getElementById(btnId);
+  if(!el)return;
+  if(tipo==='select')el.value='';
+  else el.value='';
+  if(btn)btn.style.display='none';
+  filtrarTrans();
 }
 function renderTransRows(rows){
   if(!rows||rows.length===0) return`<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--t3)">Nenhuma transação encontrada</td></tr>`;
