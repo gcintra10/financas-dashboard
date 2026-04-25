@@ -440,6 +440,17 @@ tbody tr:hover td{background:var(--ci)}
 .sum-lbl{font-size:11px;color:var(--t3);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
 .sum-val{font-size:20px;font-weight:700;font-family:var(--mono);letter-spacing:-1px}
 
+/* ══ LOGIN / USUÁRIO ════════════════════════════════════ */
+.user-pill{display:flex;align-items:center;gap:8px;padding:5px 12px 5px 5px;border-radius:40px;border:1px solid var(--b);background:var(--ci);cursor:pointer;transition:all var(--dur)}
+.user-pill:hover{border-color:var(--ac);background:var(--ad)}
+.user-pill-av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#F59E0B,#EF4444);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.user-pill-nm{font-size:12px;font-weight:600;color:var(--t2)}
+.user-switch-modal{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(8px);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px}
+.user-switch-card{background:var(--card);border:1px solid var(--b2);border-radius:24px;padding:28px;max-width:400px;width:100%;box-shadow:var(--shm)}
+.user-card-item{display:flex;align-items:center;gap:12px;padding:12px;border:1.5px solid var(--b);border-radius:var(--rs);margin-bottom:8px;cursor:pointer;transition:all var(--dur)}
+.user-card-item:hover{border-color:var(--ac);background:var(--ad)}
+.user-card-item.selected{border-color:var(--ac);background:var(--ad)}
+.user-card-av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0}
 /* ══ IMPORTAÇÃO ═════════════════════════════════════════ */
 .imp-zone{border:2px dashed var(--b2);border-radius:var(--r);padding:40px 20px;text-align:center;cursor:pointer;transition:all var(--dur);background:var(--ci)}
 .imp-zone:hover,.imp-zone.drag{border-color:var(--ac);background:var(--ad)}
@@ -532,14 +543,18 @@ tbody tr:hover td{background:var(--ci)}
 <div class="setup-ov hidden" id="setupOv">
   <div class="setup-card">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
-      <div><div class="s-ey">💰 App Financeiro</div><div class="s-ti">Conexão com Sheets</div><div class="s-su">Configure o acesso ao Google Sheets e ao Apps Script.</div></div>
+      <div><div class="s-ey">💰 App Financeiro</div><div class="s-ti">Acesso ao dashboard</div><div class="s-su">Cada usuário tem seu próprio ID de planilha. O Apps Script e token são compartilhados.</div></div>
       <button class="s-cl" onclick="fecharSetup()">×</button>
     </div>
-    <label class="s-lb">ID da Planilha</label><input class="s-in" id="iSh" placeholder="1BxiMVs0XRA5n..."/>
+    <!-- Perfis salvos -->
+    <div id="perfisSalvos" style="margin-bottom:16px"></div>
+    <div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Novo perfil / Editar</div>
+    <label class="s-lb">Seu nome</label><input class="s-in" id="iNm" placeholder="Ex: Você, Namorada, Irmão"/>
+    <label class="s-lb">ID da sua Planilha</label><input class="s-in" id="iSh" placeholder="1BxiMVs0XRA5n..."/>
     <label class="s-lb">URL do Apps Script</label><input class="s-in" id="iSc" placeholder="https://script.google.com/macros/s/..."/>
     <label class="s-lb">Token secreto</label><input class="s-in" id="iSe" type="password" placeholder="Seu token"/>
-    <label class="s-lb">Seu nome</label><input class="s-in" id="iNm" placeholder="Você"/>
-    <button class="s-btn" onclick="salvarCfg()">Salvar →</button>
+    <button class="s-btn" onclick="salvarCfg()">Salvar e entrar →</button>
+    <div style="text-align:center;margin-top:10px;font-size:12px;color:var(--t3)">💡 Cada pessoa usa seu próprio ID de planilha mas o mesmo Apps Script</div>
   </div>
 </div>
 
@@ -555,16 +570,16 @@ tbody tr:hover td{background:var(--ci)}
     </div>
     <nav class="sb-nav">
       <div class="ngl">Principal</div>
-      <button class="ni" data-tip="Visão Geral" active" onclick="nav('visao',this)"><span class="ni-ic">📊</span><span class="nl">Visão Geral</span></button>
-      <button class="ni" data-tip="Pilares"" onclick="nav('pilares',this)"><span class="ni-ic">⚖️</span><span class="nl">Pilares</span></button>
+      <button class="ni active" data-tip="Visão Geral" id="navVisao" onclick="nav('visao',this)"><span class="ni-ic">📊</span><span class="nl">Visão Geral</span></button>
+      <button class="ni" data-tip="Pilares"" id="navPilares" onclick="nav('pilares',this)"><span class="ni-ic">⚖️</span><span class="nl">Pilares</span></button>
       <div class="ngl">Gestão</div>
-      <button class="ni" data-tip="Vencimentos"" onclick="nav('venc',this)"><span class="ni-ic">📅</span><span class="nl">Vencimentos</span><span class="nb" id="bv" style="display:none">0</span></button>
-      <button class="ni" data-tip="Metas"" onclick="nav('metas',this)"><span class="ni-ic">🎯</span><span class="nl">Metas</span></button>
-      <button class="ni" data-tip="Estabelecimentos"" onclick="nav('estab',this)"><span class="ni-ic">🏪</span><span class="nl">Estabelec.</span><span class="nb" id="be" style="display:none">!</span></button>
+      <button class="ni" data-tip="Vencimentos"" id="navVenc" onclick="nav('venc',this)"><span class="ni-ic">📅</span><span class="nl">Vencimentos</span><span class="nb" id="bv" style="display:none">0</span></button>
+      <button class="ni" data-tip="Metas"" id="navMetas" onclick="nav('metas',this)"><span class="ni-ic">🎯</span><span class="nl">Metas</span></button>
+      <button class="ni" data-tip="Estabelecimentos"" id="navEstab" onclick="nav('estab',this)"><span class="ni-ic">🏪</span><span class="nl">Estabelec.</span><span class="nb" id="be" style="display:none">!</span></button>
       <button class="ni" onclick="nav('import',this)" data-tip="Importar extratos"><span class="ni-ic">📥</span><span class="nl">Importar</span></button>
       <div class="ngl">Inteligência</div>
-      <button class="ni" data-tip="Insights IA"" onclick="nav('ins',this)"><span class="ni-ic">🤖</span><span class="nl">Insights IA</span></button>
-      <button class="ni" data-tip="Chat IA"" onclick="nav('chat',this)"><span class="ni-ic">💬</span><span class="nl">Chat IA</span></button>
+      <button class="ni" data-tip="Insights IA"" id="navIns" onclick="nav('ins',this)"><span class="ni-ic">🤖</span><span class="nl">Insights IA</span></button>
+      <button class="ni" data-tip="Chat IA"" id="navChat" onclick="nav('chat',this)"><span class="ni-ic">💬</span><span class="nl">Chat IA</span></button>
     </nav>
     <div class="sb-ft">
       <button class="th-btn" onclick="toggleTema()"><span class="th-ic" id="thIc">☀️</span><span class="nl" id="thLb">Modo claro</span></button>
@@ -592,6 +607,10 @@ tbody tr:hover td{background:var(--ci)}
         </div>
         <button class="ad-btn" onclick="abrirModal()">+ Lançamento</button>
         <button class="ic-btn" onclick="toggleTema()" id="topTh">☀️</button>
+        <button class="user-pill" onclick="abrirTrocaUsuario()" id="topUserPill">
+          <div class="user-pill-av" id="topUserAv">V</div>
+          <span class="user-pill-nm" id="topUserNm">Você</span>
+        </button>
         <span id="lastUpdate" style="font-size:11px;color:var(--t3);white-space:nowrap;display:none">🕐 <strong id="lastUpdateTime"></strong></span>
       </div>
     </header>
@@ -769,6 +788,14 @@ const CATS={Necessidades:['Moradia/Aluguel','Condomínio','Água','Luz','Gás','
 const MEIOS=['Débito','Crédito Nubank','Crédito Itaú','Crédito Bradesco','Crédito Inter','Crédito BB','Crédito Santander','PIX','Dinheiro','TED/DOC','Boleto'];
 const USERS=['Você','Namorada','Irmão'];
 const PP={Necessidades:'pn',Lazer:'pl',Investimento:'pi',Reserva:'pr',Receita:'pi'};
+// Usuários do app — cada um tem sua aba de transações no Sheets
+const USUARIOS=[
+  {id:'gabriel',nome:'Gabriel',inicial:'G',cor:'linear-gradient(135deg,#4F46E5,#7C73F5)',aba:'Transações'},
+  {id:'namorada',nome:'Namorada',inicial:'N',cor:'linear-gradient(135deg,#EC4899,#F472B6)',aba:'Transações_Namorada'},
+  {id:'irmao',nome:'Irmão',inicial:'I',cor:'linear-gradient(135deg,#059669,#34D399)',aba:'Transações_Irmao'},
+];
+let USUARIO_ATUAL=null; // será carregado do localStorage
+
 const PGINFO={visao:['Visão Geral','Resumo financeiro'],pilares:['Pilares','Modelo dos 6 pilares'],venc:['Vencimentos','Contas e cartões'],metas:['Metas','Objetivos financeiros'],estab:['Estabelecimentos','Índice'],ins:['Insights IA','Análise às 03:00'],chat:['Chat IA','Converse sobre finanças'],import:['Importar Extratos','Nubank PF/PJ · Itaú']};
 const BANKS=[{id:'nubank',nm:'Nubank',em:'💜',fc:28,vc:10,cr:'Crédito Nubank'},{id:'itau',nm:'Itaú',em:'🟠',fc:20,vc:27,cr:'Crédito Itaú'},{id:'bradesco',nm:'Bradesco',em:'🔴',fc:15,vc:22,cr:'Crédito Bradesco'},{id:'inter',nm:'Inter',em:'🟡',fc:7,vc:14,cr:'Crédito Inter'},{id:'bb',nm:'Banco do Brasil',em:'🟡',fc:5,vc:12,cr:'Crédito BB'},{id:'santander',nm:'Santander',em:'🔴',fc:10,vc:17,cr:'Crédito Santander'},{id:'xp',nm:'XP',em:'⚫',fc:15,vc:22,cr:'Crédito XP'},{id:'c6',nm:'C6 Bank',em:'⬛',fc:3,vc:10,cr:'Crédito C6'},{id:'outro',nm:'Outro',em:'🏦',fc:15,vc:22,cr:'Débito'}];
 
@@ -785,6 +812,11 @@ window.addEventListener('DOMContentLoaded',()=>{
   const v=ls('fin_versao');
   if(v&&v!==VRS){lss('fin_versao',VRS);location.reload(true);}
   lss('fin_versao',VRS);
+  // Carregar usuário atual
+  const userId=ls('fin_usuario')||'gabriel';
+  USUARIO_ATUAL=USUARIOS.find(u=>u.id===userId)||USUARIOS[0];
+  atualizarUsuarioUI();
+
   const tema=ls('fin_tema')||'light';
   document.documentElement.setAttribute('data-theme',tema);
   atualizarTema(tema);
@@ -821,7 +853,47 @@ function abrirMob(){document.getElementById('sb').classList.add('mo');document.g
 function fecharMob(){document.getElementById('sb').classList.remove('mo');document.getElementById('mobOv').classList.remove('vis');}
 
 // ══ SETUP ════════════════════════════════════════════════════
-function abrirSetup(){document.getElementById('iSh').value=CFG.sheetId||'';document.getElementById('iSc').value=CFG.scriptUrl||'';document.getElementById('iSe').value=CFG.secret||'';document.getElementById('iNm').value=CFG.userName||'';document.getElementById('setupOv').classList.remove('hidden');}
+function abrirSetup(){
+  document.getElementById('iSh').value=CFG.sheetId||'';
+  document.getElementById('iSc').value=CFG.scriptUrl||'';
+  document.getElementById('iSe').value=CFG.secret||'';
+  document.getElementById('iNm').value=CFG.userName||'';
+  // Carregar perfis salvos
+  renderPerfis();
+  document.getElementById('setupOv').classList.remove('hidden');
+}
+function getPerfis(){try{return JSON.parse(ls('fin_perfis')||'[]');}catch{return[];}}
+function renderPerfis(){
+  const perfis=getPerfis();
+  const el=document.getElementById('perfisSalvos');
+  if(!el) return;
+  if(perfis.length===0){el.innerHTML='';return;}
+  el.innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Perfis salvos</div>`+
+  perfis.map((p,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:${p.sheetId===CFG.sheetId?'var(--ad)':'var(--ci)'};border:1.5px solid ${p.sheetId===CFG.sheetId?'var(--ac)':'var(--b)'};border-radius:var(--rs);margin-bottom:6px;cursor:pointer" onclick="selecionarPerfil(${i})">
+    <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,${['#4F46E5','#059669','#D97706','#DC2626'][i%4]},${['#7C73F5','#34D399','#FBBF24','#F87171'][i%4]});display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0">${p.nome.charAt(0).toUpperCase()}</div>
+    <div style="flex:1"><div style="font-size:13px;font-weight:700">${p.nome}</div><div style="font-size:11px;color:var(--t3)">${p.sheetId.substring(0,20)}...</div></div>
+    ${p.sheetId===CFG.sheetId?'<span style="font-size:10px;font-weight:700;color:var(--ac)">● Ativo</span>':''}
+    <button onclick="event.stopPropagation();removerPerfil(${i})" style="background:none;border:none;color:var(--t3);font-size:16px;cursor:pointer;padding:0 4px" title="Remover">×</button>
+  </div>`).join('');
+}
+function selecionarPerfil(i){
+  const p=getPerfis()[i];
+  if(!p) return;
+  CFG.sheetId=p.sheetId;CFG.scriptUrl=p.scriptUrl;CFG.secret=p.secret;CFG.userName=p.nome;
+  ['sheetId','scriptUrl','secret','userName'].forEach(k=>lss('fin_'+k,CFG[k]));
+  // Carregar ob_done do perfil
+  lss('fin_ob_done',p.obDone||'');
+  atualizarUser();
+  document.getElementById('setupOv').classList.add('hidden');
+  limparCache();
+  carregarDados();
+}
+function removerPerfil(i){
+  const perfis=getPerfis();
+  perfis.splice(i,1);
+  lss('fin_perfis',JSON.stringify(perfis));
+  renderPerfis();
+}
 function fecharSetup(){if(CFG.sheetId&&CFG.scriptUrl)document.getElementById('setupOv').classList.add('hidden');}
 async function salvarCfg(){
   CFG.sheetId=document.getElementById('iSh').value.trim();
@@ -830,21 +902,24 @@ async function salvarCfg(){
   CFG.userName=document.getElementById('iNm').value.trim()||'Você';
   if(!CFG.sheetId||!CFG.scriptUrl){alert('Preencha ID e URL.');return;}
   ['sheetId','scriptUrl','secret','userName'].forEach(k=>lss('fin_'+k,CFG[k]));
+  // Salvar na lista de perfis
+  const perfis=getPerfis();
+  const idx=perfis.findIndex(p=>p.sheetId===CFG.sheetId);
+  const perfil={nome:CFG.userName,sheetId:CFG.sheetId,scriptUrl:CFG.scriptUrl,secret:CFG.secret,obDone:ls('fin_ob_done')||''};
+  if(idx>=0) perfis[idx]=perfil; else perfis.push(perfil);
+  lss('fin_perfis',JSON.stringify(perfis));
   atualizarUser();
   document.getElementById('setupOv').classList.add('hidden');
-  // Verificar se já existe perfil salvo no Sheets (para outros dispositivos)
+  // Verificar se já tem dados no Sheets (permite pular onboarding em dispositivo novo)
   const obDone=ls('fin_ob_done');
   if(!obDone){
-    // Tentar carregar perfil do Sheets antes de pedir onboarding
     try{
-      const perfilAba=await buscarAba('Config');
-      if(perfilAba&&perfilAba.length>1){
-        // Sheets já tem dados — pular onboarding
+      const configAba=await buscarAba('Config');
+      if(configAba&&configAba.length>1){
         lss('fin_ob_done','1');
-        carregarDados();
-        return;
+        carregarDados();return;
       }
-    }catch(e){console.warn('Sem Config no Sheets:',e);}
+    }catch(e){}
     abrirOnboarding();
   } else {
     carregarDados();
@@ -1165,12 +1240,83 @@ async function salvarOB(){
 function nav(id,btn){
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('sec-'+id).classList.add('active');
+  if(btn) btn.classList.add('active');
+  document.getElementById('sec-'+id)?.classList.add('active');
   const info=PGINFO[id]||[id,''];
   document.getElementById('pgTi').textContent=info[0];
   document.getElementById('pgSu').textContent=info[1];
   fecharMob();
+}
+function navPorId(id){
+  document.querySelectorAll('.ni').forEach(n=>{
+    n.classList.remove('active');
+    const oc=n.getAttribute('onclick')||'';
+    if(oc.includes("'"+id+"'")) n.classList.add('active');
+  });
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
+  document.getElementById('sec-'+id)?.classList.add('active');
+  const info=PGINFO[id]||[id,''];
+  document.getElementById('pgTi').textContent=info[0];
+  document.getElementById('pgSu').textContent=info[1];
+  fecharMob();
+}
+// ══ SISTEMA DE USUÁRIOS ═════════════════════════════════════
+function atualizarUsuarioUI(){
+  if(!USUARIO_ATUAL)return;
+  const u=USUARIO_ATUAL;
+  // Topbar
+  const av=document.getElementById('topUserAv');
+  const nm=document.getElementById('topUserNm');
+  if(av){av.textContent=u.inicial;av.style.background=u.cor;}
+  if(nm) nm.textContent=u.nome;
+  // Sidebar
+  const uAv=document.getElementById('uAv');
+  const uNm=document.getElementById('uNm');
+  if(uAv){uAv.textContent=u.inicial;uAv.style.background=u.cor;}
+  if(uNm) uNm.textContent=u.nome;
+}
+
+function abrirTrocaUsuario(){
+  const div=document.createElement('div');
+  div.className='user-switch-modal';
+  div.id='userSwitchModal';
+  div.onclick=e=>{if(e.target===div)div.remove();};
+  div.innerHTML=`<div class="user-switch-card">
+    <div style="font-size:16px;font-weight:700;margin-bottom:4px">👤 Trocar usuário</div>
+    <div style="font-size:13px;color:var(--t2);margin-bottom:18px">Cada usuário tem seus próprios dados na planilha</div>
+    ${USUARIOS.map(u=>`<div class="user-card-item ${USUARIO_ATUAL?.id===u.id?'selected':''}" onclick="trocarUsuario('${u.id}')">
+      <div class="user-card-av" style="background:${u.cor}">${u.inicial}</div>
+      <div>
+        <div style="font-size:14px;font-weight:700">${u.nome}</div>
+        <div style="font-size:11px;color:var(--t3)">Aba: ${u.aba}</div>
+      </div>
+      ${USUARIO_ATUAL?.id===u.id?'<span style="margin-left:auto;font-size:11px;color:var(--ac);font-weight:700">● Ativo</span>':''}
+    </div>`).join('')}
+    <button onclick="document.getElementById('userSwitchModal').remove()" style="width:100%;padding:10px;background:var(--ci);border:1px solid var(--b);border-radius:var(--rs);color:var(--t2);font-size:13px;font-weight:600;cursor:pointer;margin-top:8px">Fechar</button>
+  </div>`;
+  document.body.appendChild(div);
+}
+
+function trocarUsuario(id){
+  USUARIO_ATUAL=USUARIOS.find(u=>u.id===id)||USUARIOS[0];
+  lss('fin_usuario',id);
+  atualizarUsuarioUI();
+  document.getElementById('userSwitchModal')?.remove();
+  limparCache();
+  carregarDados();
+}
+
+// Retorna a aba correta de transações para o usuário atual
+function abaTransacoes(){
+  return USUARIO_ATUAL?.aba||'Transações';
+}
+
+// Navegar por ID da seção sem precisar do elemento do botão
+function navTo(id){
+  const ids={visao:'navVisao',pilares:'navPilares',venc:'navVenc',metas:'navMetas',
+    estab:'navEstab',ins:'navIns',chat:'navChat',import:'navImport'};
+  const btn=document.getElementById(ids[id]);
+  nav(id,btn);
 }
 function mudarMes(d){if(d===0){ST.mesIdx=new Date().getMonth();ST.ano=new Date().getFullYear();}else{ST.mesIdx+=d;if(ST.mesIdx<0){ST.mesIdx=11;ST.ano--;}if(ST.mesIdx>11){ST.mesIdx=0;ST.ano++;}}atualizarLbl();carregarDados();}
 function atualizarLbl(){document.getElementById('lblMes').textContent=MESES[ST.mesIdx]+' '+ST.ano;}
@@ -1248,7 +1394,8 @@ function mostrarOk(id){const el=document.getElementById(id);if(el){el.style.disp
 
 // ══ DADOS ════════════════════════════════════════════════════
 async function carregarDados(){
-  const abas=['Transações','Vencimentos','Metas','Insights','Estabelecimentos'];
+  const abasTr=abaTransacoes(); // aba correta do usuário atual
+  const abas=[abasTr,'Vencimentos','Metas','Insights','Estabelecimentos'];
   const resultados={};
   const erros=[];
 
@@ -1270,15 +1417,15 @@ async function carregarDados(){
   if(erros.length>0){
     console.warn('Abas com erro:',erros);
     // Só trava se Transações falhou — o resto é opcional
-    if(erros.includes('Transações')){
-      document.getElementById('sec-visao').innerHTML=`<div class="empty">⚠️ Erro ao carregar a aba <strong>Transações</strong>.<br><small>Verifique se a planilha está publicada na web e compartilhada publicamente.</small><br><br><small style="color:var(--t3)">ID: ${CFG.sheetId}</small></div>`;
+    if(erros.includes(abasTr)){
+      document.getElementById('sec-visao').innerHTML=`<div class="empty">⚠️ Erro ao carregar a aba <strong>${abasTr}</strong>.<br><small>Verifique se a planilha está publicada na web e compartilhada publicamente.</small><br><br><small style="color:var(--t3)">ID: ${CFG.sheetId}</small></div>`;
       return;
     }
   }
 
   try{
     ST.dados=processarDados(
-      resultados['Transações'],resultados['Vencimentos'],
+      resultados[abasTr],resultados['Vencimentos'],
       resultados['Metas'],resultados['Insights'],
       resultados['Estabelecimentos'],gf,
       MC[ST.mesIdx]+'/'+ST.ano
@@ -2394,7 +2541,7 @@ async function impProcessarArquivos(lista){
 
 async function impVerificarDuplicatas(){
   try{
-    const aba=await buscarAba('Transações');
+    const aba=await buscarAba(abaTransacoes());
     _impExistentes=aba.slice(1).filter(r=>r[0]&&r[2]).map(r=>({
       data:r[0]?.toString().trim(),
       desc:(r[1]||'').toLowerCase().trim(),
@@ -2482,9 +2629,9 @@ async function impConfirmar(){
     
     // Enviar em lotes de 50
     const lotes=[];
-    for(let i=0;i<paraImportar.length;i+=50) lotes.push(paraImportar.slice(i,i+50));
+    for(let i=0;i<paraImportar.length;i+=20) lotes.push(paraImportar.slice(i,i+20));
     
-    let enviados=0;
+    let enviados=0,erros=0;
     for(const lote of lotes){
       const payload={
         acao:'importarTransacoes',
@@ -2494,8 +2641,13 @@ async function impConfirmar(){
         substituir:_impDupAction==='replace',
       };
       const resp=await chamarScript('importarTransacoes',payload);
-      if(resp&&resp.erro) throw new Error(resp.erro);
-      enviados+=lote.length;
+      if(resp&&resp.erro){
+        console.error('Erro lote:',resp.erro);
+        erros++;
+        if(erros>2) throw new Error('Erro: '+resp.erro+'\n\nVerifique se o Apps Script foi reimplantado com a nova versão.');
+      } else {
+        enviados+=lote.length;
+      }
       impShowProgress(true,`Enviando... ${enviados}/${paraImportar.length}`,50+enviados/paraImportar.length*50);
     }
 
@@ -2504,7 +2656,7 @@ async function impConfirmar(){
     const res=document.getElementById('impResult');
     res.style.display='block';
     res.className='imp-result';
-    res.innerHTML=`<div style="font-size:24px;margin-bottom:8px">✅</div><div style="font-size:15px;font-weight:700">${paraImportar.length} transações importadas!</div><div style="font-size:13px;color:var(--gr);margin-top:4px">Dados atualizados no Sheets</div><button onclick="impReset();limparCache();carregarDados();nav('visao',document.querySelector('[data-tip=\'Visão Geral\']'));" style="margin-top:12px;padding:9px 20px;background:var(--ac);color:#fff;border:none;border-radius:var(--rs);font-size:13px;font-weight:700;cursor:pointer">Ver no dashboard →</button>`;
+    res.innerHTML=`<div style="font-size:24px;margin-bottom:8px">✅</div><div style="font-size:15px;font-weight:700">${paraImportar.length} transações importadas!</div><div style="font-size:13px;color:var(--gr);margin-top:4px">Dados atualizados no Sheets</div><button onclick="impReset();limparCache();carregarDados();navPorId('visao');" style="margin-top:12px;padding:9px 20px;background:var(--ac);color:#fff;border:none;border-radius:var(--rs);font-size:13px;font-weight:700;cursor:pointer">Ver no dashboard →</button>`;
   }catch(e){
     impShowProgress(false,'',0);
     const res=document.getElementById('impResult');
