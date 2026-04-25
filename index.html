@@ -681,6 +681,7 @@ tbody tr:hover td{background:var(--ci)}
     <label class="s-lb">URL do Apps Script</label><input class="s-in" id="iSc" placeholder="https://script.google.com/macros/s/..."/>
     <label class="s-lb">Token secreto</label><input class="s-in" id="iSe" type="password" placeholder="Seu token"/>
     <button class="s-btn" onclick="salvarCfg()">Salvar e entrar →</button>
+    <button onclick="fecharSetup()" style="width:100%;padding:11px;background:none;border:1px solid var(--b);border-radius:var(--rs);color:var(--t2);font-size:14px;font-weight:600;margin-top:8px;cursor:pointer">← Cancelar e voltar</button>
     <div style="text-align:center;margin-top:10px;font-size:12px;color:var(--t3)">💡 Cada pessoa usa seu próprio ID de planilha mas o mesmo Apps Script</div>
   </div>
 </div>
@@ -1028,7 +1029,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   if(v&&v!==VRS){lss('fin_versao',VRS);location.reload(true);}
   lss('fin_versao',VRS);
   // Verificar se já está logado nessa sessão
-  const sessaoUsuario=sessionStorage.getItem('fin_sessao_usuario');
+  const sessaoUsuario=localStorage.getItem('fin_sessao_usuario');
   if(sessaoUsuario){
     // Restaurar dados do usuário do localStorage (cache)
     const uBase=USUARIOS.find(u=>u.id===sessaoUsuario)||USUARIOS[0];
@@ -1119,7 +1120,12 @@ function removerPerfil(i){
   lss('fin_perfis',JSON.stringify(perfis));
   renderPerfis();
 }
-function fecharSetup(){if(CFG.sheetId&&CFG.scriptUrl)document.getElementById('setupOv').classList.add('hidden');}
+function fecharSetup(){
+  // Fechar se tem configuração salva OU se tem sessão ativa (usuário quer cancelar)
+  if(CFG.sheetId&&CFG.scriptUrl||USUARIO_ATUAL){
+    document.getElementById('setupOv').classList.add('hidden');
+  }
+}
 async function salvarCfg(){
   CFG.sheetId=document.getElementById('iSh').value.trim();
   CFG.scriptUrl=document.getElementById('iSc').value.trim();
@@ -1226,7 +1232,7 @@ function obStep1(){
     OB.bancos.forEach((b,i)=>{
       const bk=BANKS.find(x=>x.id===b.id);
       html+=`<div class="bank-config">
-        <div class="bank-config-title">${bk?.em||'🏦'} ${bk?.nm||b.id}</div>
+        <div class="bank-config-title">${bankLogo(bk?.id||b.id,18)} ${bk?.nm||b.id}</div>
         <div class="ob-grid3">
           <div class="ob-field"><label class="ob-label">Fechamento</label>
             <input class="ob-input" type="number" min="1" max="31" placeholder="Dia" value="${b.fc}" oninput="OB.bancos[${i}].fc=parseInt(this.value)"/>
@@ -1342,7 +1348,7 @@ function obStep5Resumo(){
   </div>
   <div class="resumo-section">
     <div class="resumo-title">🏦 Bancos e cartões (${OB.bancos.length})</div>
-    ${OB.bancos.map(b=>{const bk=BANKS.find(x=>x.id===b.id);return`<div class="resumo-row"><span>${bk?.em||'🏦'} ${bk?.nm||b.id}</span><span class="resumo-val">Fecha ${b.fc}, vence ${b.vc}</span></div>`;}).join('')}
+    ${OB.bancos.map(b=>{const bk=BANKS.find(x=>x.id===b.id);return`<div class="resumo-row"><span style="display:flex;align-items:center;gap:6px">${bankLogo(b.id,16)} ${bk?.nm||b.id}</span><span class="resumo-val">Fecha ${b.fc}, vence ${b.vc}</span></div>`;}).join('')}
     ${OB.bancos.length===0?'<div style="color:var(--t3);font-size:13px">Nenhum banco configurado</div>':''}
   </div>
   <div class="resumo-section">
@@ -1621,21 +1627,32 @@ async function loginVerificarEmail(){
 }
 
 async function buscarUsuariosSheets(){
-  // URL do script e secret — usa CFG se disponível, senão constantes hardcoded
   const url = CFG.scriptUrl || 'https://script.google.com/macros/s/AKfycbyGuUVEXUu24lzgeHx_Qhl5eZ2bEvNZ8AAP5MUJqxDfxjJX3RGQNrQF7KBVObJVh8bt/exec';
   const secret = CFG.secret || 'financas2024';
+  const CACHE_KEY='fin_usuarios_cache';
+  const CACHE_TTL=30*60*1000; // 30 min
 
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: {'Content-Type': 'text/plain'},
-    body: JSON.stringify({action: 'listarUsuarios', acao: 'listarUsuarios', secret})
-  });
+  // Cache hit — retorna imediato e atualiza em background
+  try{
+    const cached=JSON.parse(ls(CACHE_KEY)||'null');
+    if(cached&&cached.ts&&Date.now()-cached.ts<CACHE_TTL&&cached.data?.length>0){
+      fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({action:'listarUsuarios',acao:'listarUsuarios',secret})})
+        .then(r=>r.json()).then(d=>{if(d.usuarios?.length>0)lss(CACHE_KEY,JSON.stringify({ts:Date.now(),data:d.usuarios}));}).catch(()=>{});
+      return cached.data;
+    }
+  }catch{}
 
+  // Cache miss — busca do servidor
+  const resp = await fetch(url, {method:'POST', headers:{'Content-Type':'text/plain'},
+    body: JSON.stringify({action:'listarUsuarios', acao:'listarUsuarios', secret})});
   if(!resp.ok) throw new Error('HTTP '+resp.status);
   const data = await resp.json();
   if(data.erro) throw new Error(data.erro);
-  if(data.usuarios && data.usuarios.length > 0) return data.usuarios;
-
+  if(data.usuarios?.length>0){
+    lss(CACHE_KEY, JSON.stringify({ts:Date.now(), data:data.usuarios}));
+    return data.usuarios;
+  }
   throw new Error('Nenhum usuário retornado pelo servidor');
 }
 
@@ -1758,7 +1775,7 @@ function loginEntrar(usuario){
   const nomeLocal=ls('fin_nome_'+usuario.id);
   if(nomeLocal) usuario.nome=nomeLocal;
   USUARIO_ATUAL=usuario;
-  sessionStorage.setItem('fin_sessao_usuario',usuario.id);
+  localStorage.setItem('fin_sessao_usuario',usuario.id);
   document.getElementById('loginOv').classList.add('hidden');
   atualizarUsuarioUI();
   if(!CFG.sheetId||!CFG.scriptUrl){
@@ -1771,7 +1788,7 @@ function loginEntrar(usuario){
 }
 
 function loginSair(){
-  sessionStorage.removeItem('fin_sessao_usuario');
+  localStorage.removeItem('fin_sessao_usuario');
   USUARIO_ATUAL=null;_pinBuffer='';_pinBuffer2='';_loginUsuarioSel=null;
   renderLoginUsuarios();
 }
@@ -2278,7 +2295,9 @@ function rVisao(){
     <div class="kpi k-re">
       <div class="kpi-top"><div class="kpi-ic re">💸</div><span class="kpi-badge ${pct>80?'up':'nu'}">${pct.toFixed(0)}% renda</span></div>
       <div class="kpi-val re">${fmt(d.td)}</div>
-      <div class="kpi-lbl">Total gasto — ${MESES[ST.mesIdx]}</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+        <div class="kpi-lbl" style="margin-bottom:0">Total gasto — ${MESES[ST.mesIdx]}</div>
+        ${(()=>{if(d.hist.length<2)return'';const prev=d.hist[d.hist.length-2]?.despesa||0;if(!prev)return'';const delta=((d.td-prev)/prev*100);const up=delta>0;return`<span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;background:${up?'var(--rd)':'var(--gd)'};color:${up?'var(--re)':'var(--gr)'}">${up?'↑':'↓'}${Math.abs(delta).toFixed(0)}%</span>`;})()}</div>
       <div class="kpi-detail">
         <div class="kpi-detail-row"><span>Fixos/carnês</span><span class="kpi-detail-val">${fmt(d.despFixasMes)}</span></div>
         <div class="kpi-detail-row"><span>Variável</span><span class="kpi-detail-val">${fmt(Math.max(0,d.td-d.despFixasMes))}</span></div>
@@ -2332,6 +2351,34 @@ function rVisao(){
         </div>
       </div>
       <div class="kpi-mini-bar"><div class="kpi-mini-fill am" style="width:${Math.min(100,d.tp/Math.max(d.rec,1)*100)}%"></div></div>
+    </div>
+  </div>
+
+  <!-- ── Feed últimas transações ── -->
+  <div class="cc" style="margin-bottom:16px">
+    <div class="cc-hd">
+      <div><div class="cc-ti">Últimas transações</div><div class="cc-su">${MESES[ST.mesIdx]}</div></div>
+      <button onclick="nav('trans',document.getElementById('navTrans'))" style="background:none;border:none;font-size:12px;color:var(--ac);font-weight:700;cursor:pointer">Ver todas →</button>
+    </div>
+    <div>
+      ${(()=>{
+        const recentes=(d.ultTr||[]).slice(0,6);
+        if(!recentes.length) return `<div style="text-align:center;padding:20px;color:var(--t3);font-size:13px">Sem transações neste mês</div>`;
+        const catIcons={'Restaurantes':'🍽️','Delivery':'🛵','Supermercado':'🛒','Combustível':'⛽','Farmácia':'💊','Streaming':'📺','Academia':'🏋️','Transporte':'🚌','Salário/Receita':'💰','Moradia/Aluguel':'🏠','Condomínio':'🏢','Celular':'📱','Internet':'📶','Luz':'💡','Investimento':'📈'};
+        return recentes.map(t=>{
+          const isRec=t.tipo==='Receita';
+          const icon=catIcons[t.cat]||( isRec?'💰':'💸');
+          const d2=t.data?.split('/')?.slice(0,2)?.join('/')||t.data||'';
+          return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--b)">
+            <div style="width:34px;height:34px;border-radius:10px;background:${isRec?'var(--gd)':'var(--ci)'};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${icon}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.desc}</div>
+              <div style="font-size:11px;color:var(--t3)">${t.cat||'—'} · ${d2}</div>
+            </div>
+            <div style="font-size:13px;font-weight:700;font-family:var(--mono);color:${isRec?'var(--gr)':'var(--re)'};white-space:nowrap">${isRec?'+':'−'}${fmt(Math.abs(t.valor))}</div>
+          </div>`;
+        }).join('');
+      })()}
     </div>
   </div>
 
@@ -2602,10 +2649,13 @@ function rPilares(){
   Object.entries(PM).forEach(([p,pct])=>{
     const meta=ref*pct,real=d.gpp[p]||0,ratio=meta>0?Math.min(120,(real/meta)*100):0;
     const over=real>meta,cls=over?'over':ratio>80?'warn':'ok',diff=Math.abs(real-meta);
+    // Cor dinâmica: verde até 70%, transição para amarelo até 90%, vermelho acima
+    const barColor=over?'var(--re)':ratio>90?`color-mix(in srgb, var(--am) ${((ratio-90)/30*100).toFixed(0)}%, var(--am))`:ratio>70?'var(--am)':'var(--gr)';
+    const barColorFinal=ratio<=70?'var(--gr)':ratio<=90?'var(--am)':'var(--re)';
     html+=`<div class="pl-item">
       <div class="pl-top"><div class="pl-nw"><span class="pl-em">${PI[p]}</span><span class="pl-nm">${p}</span></div><span class="pl-pct ${cls}">${ratio.toFixed(0)}%</span></div>
       <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-bottom:5px"><span>${fmt(real)}</span><span>meta: ${fmt(meta)}</span></div>
-      <div class="pb"><div class="pbf ${cls}" style="width:${Math.min(100,ratio)}%"></div></div>
+      <div class="pb"><div class="pbf" style="width:${Math.min(100,ratio)}%;background:${barColorFinal};transition:width .6s var(--ease),background .4s"></div></div>
       <div class="pl-st ${cls}">${over?`⚠️ ${fmt(diff)} acima`:`✅ ${fmt(diff)} dentro da meta`}</div>
     </div>`;
   });
@@ -3623,10 +3673,14 @@ function renderEvolChart(){
   if(_evolMode==='barras'){
     const maxV=Math.max(...d.hist.map(h=>Math.max(h.receita,h.despesa)),1)*1.12;
     const onClickMes=(evt,els)=>{if(!els.length)return;const idx=els[0].index;const h=d.hist[idx];if(!h)return;const parts=h.mes.split('/');if(parts.length===2){const mi=MC.indexOf(parts[0]);const ai=parseInt(parts[1]);if(mi>=0&&ai){ST.mesIdx=mi;ST.ano=ai;atualizarLbl();carregarDados();}}};
+    // Destacar mês atual com opacidade plena, demais em 55%
+    const mesAtualLabel=MC[ST.mesIdx]+'/'+ST.ano;
+    const bgReceita=d.hist.map(h=>h.mes===mesAtualLabel?gc('gr')+'DD':gc('gr')+'44');
+    const bgDespesa=d.hist.map(h=>h.mes===mesAtualLabel?gc('re')+'DD':gc('re')+'44');
     charts['cL']=new Chart(ctx,{type:'bar',data:{labels:d.hist.map(h=>h.mes),datasets:[
-      {label:'Receita',data:d.hist.map(h=>h.receita),backgroundColor:gc('gr')+'50',borderColor:gc('gr'),borderWidth:1.5,borderRadius:5,borderSkipped:false,barPercentage:.45,categoryPercentage:.85,datalabels:{display:false}},
-      {label:'Despesa',data:d.hist.map(h=>h.despesa),backgroundColor:gc('re')+'50',borderColor:gc('re'),borderWidth:1.5,borderRadius:5,borderSkipped:false,barPercentage:.45,categoryPercentage:.85,datalabels:{display:false}},
-    ]},options:{responsive:true,maintainAspectRatio:false,onClick:onClickMes,onHover:(e)=>{e.native.target.style.cursor=e.chart.getElementsAtEventForMode(e.native,'nearest',{intersect:true},false).length?'pointer':'default';},plugins:{legend:{labels:{color:gc('t2'),font:{size:11},boxWidth:8,padding:8}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmt(c.raw)} · clique para navegar`}},datalabels:{display:false}},scales:{x:{ticks:{color:gc('t2'),font:{size:11}},grid:{display:false},border:{display:false}},y:{min:0,max:maxV,ticks:{color:gc('t2'),font:{size:11},callback:v=>'R$'+(v/1000).toFixed(0)+'k',maxTicksLimit:5},grid:{color:gc('b')},border:{display:false}}},layout:{padding:{top:8}}}});
+      {label:'Receita',data:d.hist.map(h=>h.receita),backgroundColor:bgReceita,borderColor:gc('gr'),borderWidth:1.5,borderRadius:5,borderSkipped:false,barPercentage:.45,categoryPercentage:.85,datalabels:{display:false}},
+      {label:'Despesa',data:d.hist.map(h=>h.despesa),backgroundColor:bgDespesa,borderColor:gc('re'),borderWidth:1.5,borderRadius:5,borderSkipped:false,barPercentage:.45,categoryPercentage:.85,datalabels:{display:false}},
+    ]},options:{responsive:true,maintainAspectRatio:false,onClick:onClickMes,onHover:(e)=>{e.native.target.style.cursor=e.chart.getElementsAtEventForMode(e.native,'nearest',{intersect:true},false).length?'pointer':'default';},plugins:{legend:{labels:{color:gc('t2'),font:{size:11},boxWidth:8,padding:8}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmt(c.raw)} · clique para navegar`}},datalabels:{display:false}},scales:{x:{ticks:{color:(ctx2)=>d.hist[ctx2.index]?.mes===mesAtualLabel?gc('t'):gc('t2'),font:(ctx2)=>({size:11,weight:d.hist[ctx2.index]?.mes===mesAtualLabel?'700':'400'})},grid:{display:false},border:{display:false}},y:{min:0,max:maxV,ticks:{color:gc('t2'),font:{size:11},callback:v=>'R$'+(v/1000).toFixed(0)+'k',maxTicksLimit:5},grid:{color:gc('b')},border:{display:false}}},layout:{padding:{top:8}}}});
   }
   else if(_evolMode==='saldo'){
     const saldos=d.hist.map(h=>h.saldo);
@@ -3773,9 +3827,30 @@ function renderChartCat(){
   };
 
   if(chartTipo==='rosca'){
+    // Plugin inline para valor no centro
+    const centerTextPlugin={
+      id:'centerText',
+      beforeDraw(chart){
+        if(chart.config.type!=='doughnut')return;
+        const {ctx,chartArea:{top,left,width,height}}=chart;
+        ctx.save();
+        const cx=left+width/2, cy=top+height/2;
+        const totalVal=chart.data.datasets[0].data.reduce((a,b)=>a+b,0);
+        const label=totalVal>=1000?'R$'+(totalVal/1000).toFixed(1)+'k':'R$'+totalVal.toFixed(0);
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.font=`700 15px Plus Jakarta Sans,sans-serif`;
+        ctx.fillStyle=gc('t');
+        ctx.fillText(label,cx,cy-8);
+        ctx.font=`400 10px Plus Jakarta Sans,sans-serif`;
+        ctx.fillStyle=gc('t3');
+        ctx.fillText('total gasto',cx,cy+9);
+        ctx.restore();
+      }
+    };
     charts['cB']=new Chart(ctx,{
       type:'doughnut',
       data:{labels:d.topC.map(c=>c.cat),datasets:[{data:d.topC.map(c=>c.val),backgroundColor:cols,borderWidth:0,hoverOffset:8,borderRadius:4}]},
+      plugins:[centerTextPlugin],
       options:{responsive:true,maintainAspectRatio:false,cutout:'72%',
         onClick:onClickCat,
         plugins:{
