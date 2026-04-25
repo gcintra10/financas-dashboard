@@ -1540,58 +1540,74 @@ async function loginVerificarEmail(){
     document.getElementById('loginEmailErro').textContent='Digite um e-mail válido.';
     return;
   }
-  // Buscar usuário no Sheets (aba Usuarios)
-  document.getElementById('loginEmailErro').textContent='Verificando...';
+
+  const erroEl=document.getElementById('loginEmailErro');
+  const btn=document.querySelector('#loginStepEmail button');
+  erroEl.textContent='';
+  erroEl.style.color='var(--t3)';
+  erroEl.textContent='🔄 Verificando...';
+  if(btn) btn.disabled=true;
+
+  let usuarios=[];
   try{
-    const usuarios=await buscarUsuariosSheets();
-    const u=usuarios.find(r=>( r.email||'').toLowerCase()===email);
-    if(!u){
-      document.getElementById('loginEmailErro').textContent='E-mail não encontrado. Verifique ou contate o administrador.';
-      return;
-    }
-    document.getElementById('loginEmailErro').textContent='';
-    _loginUsuarioSel=u;
-    // Verificar se é primeiro login
-    const pinLocal=ls('fin_pin_'+u.id);
-    if(u.primeiroLogin==='TRUE'||u.primeiroLogin===true||!pinLocal){
-      // Primeiro acesso — pede senha temporária
-      loginMostrarStep('loginStepSenhaTemp');
-      setTimeout(()=>document.getElementById('loginSenhaTemp')?.focus(),100);
-    } else {
-      // Já tem PIN — mostrar teclado PIN
-      loginMostrarStep('loginStepAuth');
-      const av=document.getElementById('loginAvAuth');
-      if(av){av.textContent=u.inicial||(u.nome||'?').charAt(0).toUpperCase();av.style.background=u.cor||'var(--ac)';}
-      document.getElementById('loginNomeAuth').textContent=u.nome||u.email;
-      document.getElementById('loginEmailAuth').textContent=u.email;
-      document.getElementById('pinLabel').textContent='Digite seu PIN';
-      _pinBuffer='';_pinCriando=false;
-      atualizarDots();
-      document.getElementById('pinErro').textContent='';
-    }
+    usuarios=await buscarUsuariosSheets();
   }catch(e){
-    document.getElementById('loginEmailErro').textContent='Erro ao conectar. Verifique a conexão e tente novamente.';
-    console.error(e);
+    erroEl.style.color='var(--re)';
+    erroEl.textContent='Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.';
+    console.error('[login] buscarUsuariosSheets falhou:',e);
+    if(btn) btn.disabled=false;
+    return;
+  } finally {
+    if(btn) btn.disabled=false;
+  }
+
+  erroEl.textContent='';
+  erroEl.style.color='var(--re)';
+
+  const u=usuarios.find(r=>(r.email||'').toLowerCase()===email);
+  if(!u){
+    // Mostrar dica de debug: quais emails existem (sem expor senha)
+    const emails=usuarios.map(r=>r.email||'').filter(Boolean);
+    console.log('[login] E-mails cadastrados:',emails,'| Digitado:',email);
+    erroEl.textContent='E-mail não encontrado. Verifique se digitou corretamente.';
+    return;
+  }
+
+  _loginUsuarioSel=u;
+  const pinLocal=ls('fin_pin_'+u.id);
+  if(u.primeiroLogin==='TRUE'||u.primeiroLogin===true||!pinLocal){
+    loginMostrarStep('loginStepSenhaTemp');
+    setTimeout(()=>document.getElementById('loginSenhaTemp')?.focus(),100);
+  } else {
+    loginMostrarStep('loginStepAuth');
+    const av=document.getElementById('loginAvAuth');
+    if(av){av.textContent=u.inicial||(u.nome||'?').charAt(0).toUpperCase();av.style.background=u.cor||'var(--ac)';}
+    document.getElementById('loginNomeAuth').textContent=u.nome||u.email;
+    document.getElementById('loginEmailAuth').textContent=u.email;
+    document.getElementById('pinLabel').textContent='Digite seu PIN';
+    _pinBuffer='';_pinCriando=false;
+    atualizarDots();
+    document.getElementById('pinErro').textContent='';
   }
 }
 
 async function buscarUsuariosSheets(){
-  // Tenta ler aba "Usuarios" do Sheets via Apps Script
-  try{
-    const resp=await fetch(CFG.scriptUrl,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'listarUsuarios',secret:CFG.secret})
-    });
-    const data=await resp.json();
-    if(data.usuarios) return data.usuarios;
-  }catch{}
-  // Fallback: usar USUARIOS hardcoded (desenvolvimento)
-  return USUARIOS.map(u=>({
-    id:u.id,nome:u.nome,email:u.email||u.id+'@financas.app',
-    primeiroLogin:!ls('fin_pin_'+u.id)?'TRUE':'FALSE',
-    senhatemp:'1234',cor:u.cor,aba:u.aba,inicial:u.inicial,foto:''
-  }));
+  // URL do script e secret — usa CFG se disponível, senão constantes hardcoded
+  const url = CFG.scriptUrl || 'https://script.google.com/macros/s/AKfycbyGuUVEXUu24lzgeHx_Qhl5eZ2bEvNZ8AAP5MUJqxDfxjJX3RGQNrQF7KBVObJVh8bt/exec';
+  const secret = CFG.secret || 'financas2024';
+
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({action: 'listarUsuarios', acao: 'listarUsuarios', secret})
+  });
+
+  if(!resp.ok) throw new Error('HTTP '+resp.status);
+  const data = await resp.json();
+  if(data.erro) throw new Error(data.erro);
+  if(data.usuarios && data.usuarios.length > 0) return data.usuarios;
+
+  throw new Error('Nenhum usuário retornado pelo servidor');
 }
 
 function loginVoltarEmail(){
@@ -1687,13 +1703,15 @@ function pinVerificarCriar(){
 }
 
 async function marcarPrimeiroLoginConcluido(userId){
+  const url=CFG.scriptUrl||'https://script.google.com/macros/s/AKfycbyGuUVEXUu24lzgeHx_Qhl5eZ2bEvNZ8AAP5MUJqxDfxjJX3RGQNrQF7KBVObJVh8bt/exec';
+  const secret=CFG.secret||'financas2024';
   try{
-    await fetch(CFG.scriptUrl,{
+    await fetch(url,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'marcarPrimeiroLogin',userId,secret:CFG.secret})
+      body:JSON.stringify({action:'marcarPrimeiroLogin',acao:'marcarPrimeiroLogin',userId,secret})
     });
-  }catch{}
+  }catch(e){console.warn('[login] marcarPrimeiroLogin falhou:',e);}
 }
 
 function loginFinalizarCadastro(pular=false){
