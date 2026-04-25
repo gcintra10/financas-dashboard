@@ -1389,7 +1389,23 @@ async function salvarF(){
   await chamarScript('salvarGastoFixoDoFormulario',{tipoComp:tc,desc,valor,dia,pilar,cat,meio,usuario,obs,parcIni:pI,parcTot:pT});
   mostrarOk('ffok');setTimeout(()=>{fecharModal();carregarDados();},1200);
 }
-async function chamarScript(acao,payload){try{const r=await fetch(CFG.scriptUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao,secret:CFG.secret,sheetId:CFG.sheetId,...payload})});return r.json();}catch(e){console.error(e);return{};}}
+async function chamarScript(acao,payload){
+  try{
+    const body=JSON.stringify({acao,secret:CFG.secret,sheetId:CFG.sheetId,...payload});
+    // Apps Script requer text/plain para evitar CORS preflight
+    const r=await fetch(CFG.scriptUrl,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain'},
+      body:body,
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const txt=await r.text();
+    try{return JSON.parse(txt);}catch{console.warn('Resposta não-JSON:',txt);return{raw:txt};}
+  }catch(e){
+    console.error('chamarScript erro:',e);
+    return{erro:e.message};
+  }
+}
 function mostrarOk(id){const el=document.getElementById(id);if(el){el.style.display='block';setTimeout(()=>el.style.display='none',2000);}}
 
 // ══ DADOS ════════════════════════════════════════════════════
@@ -2620,35 +2636,54 @@ async function impConfirmar(){
   
   document.getElementById('impConfirmBtn').textContent='Enviando...';
   document.getElementById('impConfirmBtn').disabled=true;
-  impShowProgress(true,'Enviando para o Sheets...',50);
+  impShowProgress(true,'Verificando configurações...',10);
 
   try{
-    // Verificar config antes de enviar
-    if(!CFG.scriptUrl){throw new Error('URL do Apps Script não configurada. Vá em Configurações.');}
-    if(!CFG.sheetId){throw new Error('ID da planilha não configurado. Vá em Configurações.');}
-    
-    // Enviar em lotes de 50
+    if(!CFG.scriptUrl) throw new Error('URL do Apps Script não configurada. Vá em ⚙️ Configurações.');
+    if(!CFG.sheetId)   throw new Error('ID da planilha não configurado. Vá em ⚙️ Configurações.');
+
+    // Teste de conectividade primeiro
+    impShowProgress(true,'Testando conexão com Apps Script...',20);
+    const teste=await chamarScript('ping',{secret:CFG.secret,sheetId:CFG.sheetId});
+    console.log('Resposta ping:', JSON.stringify(teste));
+    if(teste&&teste.erro&&teste.erro.includes('autorizado')){
+      throw new Error('Token secreto incorreto. Verifique em ⚙️ Configurações.');
+    }
+
+    // Enviar em lotes de 20
     const lotes=[];
     for(let i=0;i<paraImportar.length;i+=20) lotes.push(paraImportar.slice(i,i+20));
     
-    let enviados=0,erros=0;
-    for(const lote of lotes){
+    impShowProgress(true,`Enviando 0/${paraImportar.length}...`,25);
+    let enviados=0, erros=0;
+    const errosMsgs=[];
+
+    for(let li=0;li<lotes.length;li++){
+      const lote=lotes[li];
       const payload={
         acao:'importarTransacoes',
         secret:CFG.secret,
         sheetId:CFG.sheetId,
+        abaDestino:abaTransacoes(),
         transacoes:lote,
         substituir:_impDupAction==='replace',
       };
+      console.log(`Enviando lote ${li+1}/${lotes.length} (${lote.length} itens) para aba: ${abaTransacoes()}`);
       const resp=await chamarScript('importarTransacoes',payload);
-      if(resp&&resp.erro){
-        console.error('Erro lote:',resp.erro);
+      console.log(`Resposta lote ${li+1}:`, JSON.stringify(resp));
+      
+      if(!resp||resp.erro){
         erros++;
-        if(erros>2) throw new Error('Erro: '+resp.erro+'\n\nVerifique se o Apps Script foi reimplantado com a nova versão.');
+        errosMsgs.push(resp?.erro||'Sem resposta do servidor');
+        if(erros>=2) throw new Error(
+          'Apps Script retornou erro:\n'+errosMsgs.join('\n')+
+          '\n\n🔧 Verifique:\n1. Apps Script foi reimplantado?\n2. O Web App tem acesso "Qualquer pessoa"?\n3. O sheetId está correto?'
+        );
       } else {
-        enviados+=lote.length;
+        enviados+=(resp.importadas||lote.length);
       }
-      impShowProgress(true,`Enviando... ${enviados}/${paraImportar.length}`,50+enviados/paraImportar.length*50);
+      impShowProgress(true,`Enviando... ${Math.min(enviados,paraImportar.length)}/${paraImportar.length}`,
+        25+((li+1)/lotes.length*70));
     }
 
     impShowProgress(false,'',100);
@@ -2656,12 +2691,22 @@ async function impConfirmar(){
     const res=document.getElementById('impResult');
     res.style.display='block';
     res.className='imp-result';
-    res.innerHTML=`<div style="font-size:24px;margin-bottom:8px">✅</div><div style="font-size:15px;font-weight:700">${paraImportar.length} transações importadas!</div><div style="font-size:13px;color:var(--gr);margin-top:4px">Dados atualizados no Sheets</div><button onclick="impReset();limparCache();carregarDados();navPorId('visao');" style="margin-top:12px;padding:9px 20px;background:var(--ac);color:#fff;border:none;border-radius:var(--rs);font-size:13px;font-weight:700;cursor:pointer">Ver no dashboard →</button>`;
+    res.innerHTML=`<div style="font-size:28px;margin-bottom:8px">✅</div>
+      <div style="font-size:15px;font-weight:700">${enviados} transações importadas!</div>
+      <div style="font-size:12px;color:var(--gr);margin-top:4px">Aba: ${abaTransacoes()}</div>
+      <button onclick="impReset();limparCache();carregarDados();navTo('visao');" 
+        style="margin-top:14px;padding:10px 24px;background:var(--ac);color:#fff;border:none;border-radius:var(--rs);font-size:14px;font-weight:700;cursor:pointer">
+        Ver no dashboard →
+      </button>`;
   }catch(e){
+    console.error('Erro importação:', e);
     impShowProgress(false,'',0);
     const res=document.getElementById('impResult');
-    res.style.display='block';res.className='imp-result erro';
-    res.innerHTML=`⚠️ Erro ao importar: ${e.message}`;
+    res.style.display='block';
+    res.className='imp-result erro';
+    res.innerHTML=`<div style="font-weight:700;margin-bottom:8px">⚠️ Erro ao importar</div>
+      <div style="font-size:13px;white-space:pre-wrap;text-align:left">${e.message}</div>
+      <div style="font-size:11px;color:var(--t3);margin-top:8px">Abra o console do navegador (F12) para mais detalhes</div>`;
     document.getElementById('impConfirmBtn').disabled=false;
     document.getElementById('impConfirmBtn').textContent='Tentar novamente';
   }
