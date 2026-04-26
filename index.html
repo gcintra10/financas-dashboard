@@ -785,14 +785,14 @@ tbody tr:hover td{background:var(--ci)}
                   <tr style="border-top:1px solid var(--b)">
                     <td style="padding:9px 12px;font-weight:700"><img src="${BANK_LOGOS.nubank}" width="18" height="18" style="border-radius:4px;vertical-align:middle;margin-right:6px"/>Nubank PF</td>
                     <td style="padding:9px 12px;color:var(--t2)">CSV</td>
-                    <td style="padding:9px 12px"><code style="background:var(--ci);padding:2px 6px;border-radius:4px;font-size:11px;font-family:var(--mono)">[PF]</code> <code style="background:var(--ci);padding:2px 6px;border-radius:4px;font-size:11px;font-family:var(--mono)">_pf_</code> <code style="background:var(--ci);padding:2px 6px;border-radius:4px;font-size:11px;font-family:var(--mono)">-pf-</code></td>
-                    <td style="padding:9px 12px;color:var(--t3);font-size:11px;font-family:var(--mono)">nubank_jan2026[PF].csv</td>
+                    <td style="padding:9px 12px"><code style="background:var(--ci);padding:2px 6px;border-radius:4px;font-size:11px;font-family:var(--mono)">nubank</code> + opcionalmente <code style="background:var(--ci);padding:2px 6px;border-radius:4px;font-size:11px;font-family:var(--mono)">pf</code></td>
+                    <td style="padding:9px 12px;color:var(--t3);font-size:11px;font-family:var(--mono)">nubank_pf_jan2026.csv</td>
                   </tr>
                   <tr style="border-top:1px solid var(--b)">
                     <td style="padding:9px 12px;font-weight:700"><img src="${BANK_LOGOS.nubank}" width="18" height="18" style="border-radius:4px;vertical-align:middle;margin-right:6px"/>Nubank PJ</td>
                     <td style="padding:9px 12px;color:var(--t2)">CSV</td>
-                    <td style="padding:9px 12px"><code style="background:var(--ci);padding:2px 6px;border-radius:4px;font-size:11px;font-family:var(--mono)">[PJ]</code> <code style="background:var(--ci);padding:2px 6px;border-radius:4px;font-size:11px;font-family:var(--mono)">_pj_</code> <code style="background:var(--ci);padding:2px 6px;border-radius:4px;font-size:11px;font-family:var(--mono)">-pj-</code></td>
-                    <td style="padding:9px 12px;color:var(--t3);font-size:11px;font-family:var(--mono)">nubank_jan2026[PJ].csv</td>
+                    <td style="padding:9px 12px"><code style="background:var(--ci);padding:2px 6px;border-radius:4px;font-size:11px;font-family:var(--mono)">nubank</code> + <code style="background:var(--ci);padding:2px 6px;border-radius:4px;font-size:11px;font-family:var(--mono)">pj</code></td>
+                    <td style="padding:9px 12px;color:var(--t3);font-size:11px;font-family:var(--mono)">nubank_pj_jan2026.csv</td>
                   </tr>
                   <tr style="border-top:1px solid var(--b)">
                     <td style="padding:9px 12px;font-weight:700"><img src="${BANK_LOGOS.itau}" width="18" height="18" style="border-radius:4px;vertical-align:middle;margin-right:6px"/>Itaú</td>
@@ -3250,18 +3250,45 @@ function impDeveIgnorar(titulo, valor){
 }
 
 // Detectar banco pelo nome do arquivo
+// Convenção recomendada: nubank_pf_jan2026.csv, nubank_pj_jan2026.csv, itau_jan2026.pdf
+// "nubank" no nome = Nubank; "pf"/"pj" dentro identificam conta PF ou PJ
 function impDetectarBanco(nomeArquivo){
   const n=nomeArquivo.toLowerCase();
-  // PF/PJ pode ser cartão ou conta — diferenciamos pelo cabeçalho CSV em impParseNubankAuto
-  if(n.includes('[pf]')||n.includes('_pf_')||n.includes('-pf-')) return{banco:'Nubank PF',meio:'Nubank PF',tipo:'nubank_auto',fech:28,vc:5,detectado:true};
-  if(n.includes('[pj]')||n.includes('_pj_')||n.includes('-pj-')) return{banco:'Nubank PJ',meio:'Nubank PJ',tipo:'nubank_auto',fech:28,vc:10,detectado:true};
-  if(n.includes('itau')||n.includes('itaú')) return{banco:'Itaú',meio:'Débito Itaú',tipo:'itau_pdf',fech:0,vc:0,detectado:true};
-  if((n.includes('bradesco'))&&n.endsWith('.pdf')) return{banco:'Bradesco',meio:'Débito Bradesco',tipo:'bradesco_pdf',fech:0,vc:0,detectado:true};
-  if(n.includes('bb')||n.includes('brasil')||n.includes('extrato_conta')) return{banco:'Banco do Brasil',meio:'Débito BB',tipo:'bb',fech:0,vc:0,detectado:true};
-  if(n.includes('bradesco')) return{banco:'Bradesco',meio:'Crédito Bradesco',tipo:'nubank',fech:15,vc:22,detectado:true};
-  if(n.includes('santander')) return{banco:'Santander',meio:'Crédito Santander',tipo:'nubank',fech:10,vc:17,detectado:true};
-  if(n.includes('inter')) return{banco:'Inter',meio:'Crédito Inter',tipo:'nubank',fech:7,vc:14,detectado:true};
-  if(n.includes('nubank')||n.includes('nu_')) return{banco:'Nubank',meio:'Nubank PF',tipo:'nubank_auto',fech:28,vc:5,detectado:false};
+
+  // ── NUBANK — banco deve estar no nome ──────────────────────
+  if(n.includes('nubank')||n.includes('nu_')){
+    const isPJ=n.includes('_pj')||n.includes('-pj')||n.includes('[pj]');
+    const nomeBanco=isPJ?'Nubank PJ':'Nubank PF';
+    return{banco:nomeBanco,meio:nomeBanco,tipo:'nubank_auto',fech:28,vc:isPJ?10:5,detectado:true};
+  }
+  // Legado: _pf_ / _pj_ sem "nubank" (ex: extratos antigos Nubank)
+  if(n.includes('[pf]')||n.includes('_pf_')||n.includes('-pf-'))
+    return{banco:'Nubank PF',meio:'Nubank PF',tipo:'nubank_auto',fech:28,vc:5,detectado:true};
+  if(n.includes('[pj]')||n.includes('_pj_')||n.includes('-pj-'))
+    return{banco:'Nubank PJ',meio:'Nubank PJ',tipo:'nubank_auto',fech:28,vc:10,detectado:true};
+
+  // ── ITAÚ ───────────────────────────────────────────────────
+  if(n.includes('itau')||n.includes('itaú'))
+    return{banco:'Itaú',meio:'Débito Itaú',tipo:'itau_pdf',fech:0,vc:0,detectado:true};
+
+  // ── BRADESCO ───────────────────────────────────────────────
+  if(n.includes('bradesco')){
+    if(n.endsWith('.pdf')) return{banco:'Bradesco',meio:'Débito Bradesco',tipo:'bradesco_pdf',fech:0,vc:0,detectado:true};
+    return{banco:'Bradesco',meio:'Crédito Bradesco',tipo:'nubank',fech:15,vc:22,detectado:true};
+  }
+
+  // ── BANCO DO BRASIL ────────────────────────────────────────
+  if(n.includes('bb_')||n.includes('_bb.')||n.includes('bancodobrasil')||n.includes('brasil')||n.includes('extrato_conta'))
+    return{banco:'Banco do Brasil',meio:'Débito BB',tipo:'bb',fech:0,vc:0,detectado:true};
+
+  // ── SANTANDER ──────────────────────────────────────────────
+  if(n.includes('santander'))
+    return{banco:'Santander',meio:'Crédito Santander',tipo:'nubank',fech:10,vc:17,detectado:true};
+
+  // ── INTER ──────────────────────────────────────────────────
+  if(n.includes('inter'))
+    return{banco:'Inter',meio:'Crédito Inter',tipo:'nubank',fech:7,vc:14,detectado:true};
+
   return{banco:'',meio:'',tipo:'desconhecido',fech:28,vc:5,detectado:false};
 }
 
@@ -3966,24 +3993,36 @@ function setDupAction(action){
 function impMostrarPreview(){
   const novas=_impDados.filter(r=>!r.isDup);
   const dups=_impDados.filter(r=>r.isDup);
-  
+
   document.getElementById('impTotalTr').textContent=_impDados.length;
   document.getElementById('impNovas').textContent=novas.length;
   document.getElementById('impDups').textContent=dups.length;
-  
-  // Período
-  const datas=_impDados.map(r=>r.data).filter(Boolean);
-  const meses=[...new Set(_impDados.map(r=>r.mes))];
-  document.getElementById('impPeriodo').textContent=meses.join(', ');
-  
-  // Saldo capturado do extrato ou campo manual
+
+  // Período e bancos
+  const meses=[...new Set(_impDados.map(r=>r.mes))].filter(Boolean);
+  const bancosLista=[...new Set(_impDados.map(r=>r.banco))].filter(Boolean);
+  document.getElementById('impPeriodo').textContent=meses.join(', ')||'—';
+
+  // Mostrar fechamento/vencimento só para cartão de crédito
   const cfg=window._impUltimoBancoCfg;
+  const isCartao=cfg&&(cfg.tipo==='nubank'||cfg.tipo==='nubank_cartao');
+  const fechVencEl=document.getElementById('impFechVenc');
+  if(fechVencEl){
+    fechVencEl.style.display=isCartao?'block':'none';
+    if(isCartao&&cfg){
+      const fechEl=document.getElementById('impFechDia');
+      const vencEl=document.getElementById('impVencDia');
+      if(fechEl&&!fechEl.value) fechEl.value=cfg.fech||28;
+      if(vencEl&&!vencEl.value) vencEl.value=cfg.vc||5;
+    }
+  }
+
+  // Saldo capturado do extrato ou campo manual
   let saldoInfo='';
   if(cfg){
     const saldoCap=cfg._saldoCapturado;
     const saldoPer=cfg._saldoPeriodo;
     if(saldoCap!=null){
-      // Saldo real capturado do PDF (Itaú, Bradesco)
       saldoInfo=`
         <div style="margin-top:10px;padding:10px 12px;background:var(--gd);border-radius:var(--rs);border:1px solid var(--gr)">
           <div style="font-size:11px;font-weight:700;color:var(--gr);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">✅ Saldo capturado do extrato</div>
@@ -3991,26 +4030,20 @@ function impMostrarPreview(){
           <div style="font-size:11px;color:var(--t3);margin-top:2px">Será salvo como saldo atual do ${cfg.banco}</div>
         </div>`;
       cfg._saldoManual=saldoCap;
-    } else {
-      // Sem saldo automático — campo manual
-      const labelExtra=saldoPer!=null?` (variação no período: ${saldoPer>0?'+':''}${fmt(saldoPer)})`:'';
+    } else if(!isCartao){
+      const labelExtra=saldoPer!=null?` (variação no período: ${saldoPer>=0?'+':''}${fmt(saldoPer)})`:'';
       saldoInfo=`
         <div style="margin-top:10px;padding:10px 12px;background:var(--ci);border-radius:var(--rs);border:1px solid var(--b)">
-          <div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">
-            Saldo atual em conta${labelExtra}
-          </div>
-          <div style="font-size:11px;color:var(--t3);margin-bottom:6px">
-            O extrato do ${cfg.banco} não contém saldo absoluto. Informe o saldo atual para acompanhamento correto.
-          </div>
-          <input id="impSaldoManual" type="number" step="0.01" placeholder="Ex: 1250,00"
+          <div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Saldo atual em conta${labelExtra}</div>
+          <div style="font-size:11px;color:var(--t3);margin-bottom:6px">O extrato não contém saldo absoluto. Informe para acompanhamento correto (opcional).</div>
+          <input id="impSaldoManual" type="number" step="0.01" placeholder="Ex: 1250.00"
             style="width:100%;padding:8px 10px;background:var(--card);border:1.5px solid var(--b);border-radius:var(--rx);color:var(--t);font-size:15px;font-family:var(--mono);outline:none"
-            oninput="window._impUltimoBancoCfg._saldoManual=parseFloat(this.value.replace(',','.'))||null"/>
-          <div style="font-size:10px;color:var(--t3);margin-top:4px">Opcional — pode preencher depois</div>
+            oninput="window._impUltimoBancoCfg._saldoManual=parseFloat(this.value)||null"/>
         </div>`;
     }
   }
-  document.getElementById('impBancoTag').innerHTML=(bancos.join(' + '))+(saldoInfo?'<br>'+saldoInfo:'');
-  
+  document.getElementById('impBancoTag').innerHTML=bancosLista.join(' + ')+(saldoInfo?'<br>'+saldoInfo:'');
+
   // Conflitos
   const confEl=document.getElementById('impConflicts');
   if(dups.length>0){
@@ -4024,16 +4057,15 @@ function impMostrarPreview(){
   const paraImportar=_impDupAction==='skip'?novas:_impDados;
   document.getElementById('impTableBody').innerHTML=paraImportar.slice(0,30).map(r=>`<tr>
     <td style="padding:6px 8px;font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t);border-bottom:1px solid var(--b)">${r.desc}</td>
-    <td style="padding:6px 8px;font-size:11px;color:var(--t2);border-bottom:1px solid var(--b)"><span class="pill pn">${r.cat}</span></td>
-    <td style="padding:6px 8px;font-size:11px;color:var(--t3);border-bottom:1px solid var(--b)">${r.mes}</td>
-    <td style="padding:6px 8px;font-size:12px;font-family:var(--mono);font-weight:600;text-align:right;color:var(--re);border-bottom:1px solid var(--b)">${fmt(Math.abs(r.valor))}</td>
+    <td style="padding:6px 8px;font-size:11px;color:var(--t2);border-bottom:1px solid var(--b)"><span class="pill pn">${r.cat||'—'}</span></td>
+    <td style="padding:6px 8px;font-size:11px;color:var(--t3);border-bottom:1px solid var(--b)">${r.mes||'—'}</td>
+    <td style="padding:6px 8px;font-size:12px;font-family:var(--mono);font-weight:600;text-align:right;color:${r.tipo==='Receita'?'var(--gr)':'var(--re)'};border-bottom:1px solid var(--b)">${r.tipo==='Receita'?'+':''}${fmt(Math.abs(r.valor))}</td>
     <td style="padding:6px 8px;text-align:center;border-bottom:1px solid var(--b)">${r.isDup?'<span style="font-size:10px;color:var(--am)">⚠️ dup</span>':'<span style="font-size:10px;color:var(--gr)">✓ nova</span>'}</td>
   </tr>`).join('')+(paraImportar.length>30?`<tr><td colspan="5" style="padding:8px;text-align:center;font-size:11px;color:var(--t3)">+${paraImportar.length-30} transações não exibidas</td></tr>`:'');
-  
-  // Atualizar botão
+
   const paraImportarCount=paraImportar.length;
   document.getElementById('impConfirmBtn').textContent=`✓ Importar ${paraImportarCount} transações para o Sheets`;
-  
+  document.getElementById('impConfirmBtn').disabled=false;
   document.getElementById('impPreview').style.display='block';
 }
 
