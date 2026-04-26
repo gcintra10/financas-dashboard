@@ -675,9 +675,25 @@ tbody tr:hover td{background:var(--ci)}
       <div><div class="s-ey">💰 App Financeiro</div><div class="s-ti">Acesso ao dashboard</div><div class="s-su">Cada usuário tem seu próprio ID de planilha. O Apps Script e token são compartilhados.</div></div>
       <button class="s-cl" onclick="fecharSetup()">×</button>
     </div>
+    <!-- Acesso rápido ao cadastro -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Editar cadastro</div>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
+        <select id="obEtapaSelect" style="background:var(--ci);border:1px solid var(--b);border-radius:var(--rs);padding:9px 12px;color:var(--t2);font-size:13px;outline:none;font-family:var(--font)">
+          <option value="0">💰 Renda mensal</option>
+          <option value="1">🏦 Bancos e cartões</option>
+          <option value="2">📌 Despesas fixas</option>
+          <option value="3">📈 Investimentos</option>
+          <option value="4">🎯 Metas</option>
+          <option value="5">✅ Resumo</option>
+        </select>
+        <button onclick="irParaEtapaOB()" style="padding:9px 16px;background:var(--ac);color:#fff;border:none;border-radius:var(--rs);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">Editar →</button>
+      </div>
+    </div>
+    <div style="height:1px;background:var(--b);margin-bottom:16px"></div>
     <!-- Perfis salvos -->
     <div id="perfisSalvos" style="margin-bottom:16px"></div>
-    <div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Novo perfil / Editar</div>
+    <div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Conexão com Planilha</div>
     <label class="s-lb">Seu nome</label><input class="s-in" id="iNm" placeholder="Ex: Você, Namorada, Irmão"/>
     <label class="s-lb">ID da sua Planilha</label><input class="s-in" id="iSh" placeholder="1BxiMVs0XRA5n..."/>
     <label class="s-lb">URL do Apps Script</label><input class="s-in" id="iSc" placeholder="https://script.google.com/macros/s/..."/>
@@ -1206,13 +1222,22 @@ function abrirOnboarding(){
   obRender();
 }
 function fecharOB(){document.getElementById('obOv').classList.add('hidden');}
+function irParaEtapaOB(){
+  const etapa=parseInt(document.getElementById('obEtapaSelect')?.value||0);
+  fecharSetup();
+  try{const bs=JSON.parse(ls('fin_bancos')||'[]');OB.bancos=bs;}catch{}
+  try{const ds=JSON.parse(ls('fin_despesas')||'[]');OB.despesas=ds;}catch{}
+  try{const is=JSON.parse(ls('fin_inv')||'[]');OB.investimentos=is;}catch{}
+  try{const ms=JSON.parse(ls('fin_metas_ob')||'[]');OB.metas=ms;}catch{}
+  OB.step=etapa;
+  document.getElementById('obOv').classList.remove('hidden');
+  obRender();
+}
 function fecharOBComConfirm(){
-  // Se já passou do primeiro passo, confirmar antes de sair
   if(OB.step>0){
     if(!confirm('Sair do cadastro? As alterações desta sessão serão perdidas. Você pode voltar depois em "Editar perfil".')) return;
   }
   fecharOB();
-  // Se já tem dados carregados, volta ao dashboard; senão carrega
   if(ST.dados) return;
   if(CFG.sheetId&&CFG.scriptUrl) carregarDados();
 }
@@ -1283,6 +1308,19 @@ function obStep1(){
               <option value="sim" ${b.credito!==false?'selected':''}>Sim</option>
               <option value="nao" ${b.credito===false?'selected':''}>Não (só débito)</option>
             </select>
+          </div>
+        </div>
+        <div class="ob-field" style="margin-top:8px">
+          <label class="ob-label">Aplicar datas de fechamento/vencimento</label>
+          <select class="ob-select" onchange="OB.bancos[${i}].escopoData=this.value" style="font-size:12px">
+            <option value="futuro" ${(b.escopoData||'futuro')==='futuro'?'selected':''}>📅 Só a partir de agora (não altera histórico)</option>
+            <option value="mes" ${b.escopoData==='mes'?'selected':''}>📆 Mês atual e futuros</option>
+            <option value="tudo" ${b.escopoData==='tudo'?'selected':''}>🗄️ Tudo — reprocessar transações existentes</option>
+          </select>
+          <div style="font-size:10px;color:var(--t3);margin-top:4px">
+            ${b.escopoData==='tudo'?'⚠️ Vai reclassificar o mês de fatura de todas as transações deste cartão no Sheets.':
+              b.escopoData==='mes'?'As transações do mês atual terão o mês de fatura recalculado.':
+              'Transações anteriores não serão alteradas.'}
           </div>
         </div>
       </div>`;
@@ -3194,7 +3232,7 @@ function impDetectarParcela(titulo){
   return{titulo,atual:null,total:null};
 }
 
-// Calcular saldo total em contas (soma dos saldos mais recentes de cada banco)
+// Calcular saldo total em contas e saldo virtual (descontando faturas abertas)
 function calcSaldoContas(){
   try{
     const hist=JSON.parse(ls('fin_saldos_hist')||'{}');
@@ -3213,18 +3251,34 @@ function calcSaldoContas(){
 function rSaldoContas(){
   const {total,detalhes}=calcSaldoContas();
   if(total===null||detalhes.length===0) return '';
-  const cor=total>=0?'var(--gr)':'var(--re)';
-  return `<div class="kpi k-gr" style="border-top:3px solid ${cor}">
-    <div class="kpi-top"><div class="kpi-ic" style="background:${cor}22">🏦</div><span class="kpi-badge nu">${detalhes.length} conta(s)</span></div>
-    <div class="kpi-val" style="color:${cor}">${fmt(total)}</div>
+
+  // Fatura aberta do cartão = soma despesas do mês atual que ainda não venceram
+  const d=ST.dados;
+  const faturaAberta=d?Object.entries(d.gpp||{}).reduce((s,[,v])=>s+v,0)*0:0;
+  // Usar topC para estimar o que foi gasto no cartão de crédito
+  const gastoCartao=d?
+    (d.ultTr||[]).filter(t=>t.meio&&(t.meio.includes('Crédito')||t.meio.includes('crédito'))&&t.tipo==='Despesa')
+    .reduce((s,t)=>s+Math.abs(t.valor),0):0;
+
+  const saldoVirtual=total-gastoCartao;
+  const corConta=total>=0?'var(--gr)':'var(--re)';
+  const corVirtual=saldoVirtual>=0?'var(--gr)':'var(--re)';
+
+  return `<div class="kpi k-gr" style="border-left:3px solid ${corConta}">
+    <div class="kpi-top"><div class="kpi-ic" style="background:${corConta}22;font-size:16px">🏦</div><span class="kpi-badge nu">${detalhes.length} conta(s)</span></div>
+    <div class="kpi-val" style="color:${corConta}">${fmt(total)}</div>
     <div class="kpi-lbl">Saldo em contas</div>
     <div class="kpi-detail">
       ${detalhes.map(d=>`<div class="kpi-detail-row"><span>${d.banco}</span><span class="kpi-detail-val" style="color:${d.saldo>=0?'var(--gr)':'var(--re)'}">${fmt(d.saldo)}</span></div>`).join('')}
-      <div class="kpi-detail-row" style="border-top:1px solid var(--b);margin-top:4px;padding-top:4px">
-        <span style="font-size:10px;color:var(--t3)">Atualizado ao importar extrato</span>
+      ${gastoCartao>0?`<div class="kpi-detail-row" style="border-top:1px solid var(--b);margin-top:4px;padding-top:4px">
+        <span>Fatura cartão (mês)</span><span class="kpi-detail-val" style="color:var(--re)">−${fmt(gastoCartao)}</span>
       </div>
+      <div class="kpi-detail-row">
+        <span style="font-weight:700">Saldo virtual</span><span class="kpi-detail-val" style="color:${corVirtual};font-weight:700">${fmt(saldoVirtual)}</span>
+      </div>`:''}
+      <div style="font-size:10px;color:var(--t3);margin-top:6px">Atualizado ao importar extrato</div>
     </div>
-    <div class="kpi-mini-bar"><div class="kpi-mini-fill" style="width:100%;background:${cor}"></div></div>
+    <div class="kpi-mini-bar"><div class="kpi-mini-fill" style="width:100%;background:${corConta}"></div></div>
   </div>`;
 }
 function impMesFatura(dataStr,fechDia=28){
@@ -3751,29 +3805,54 @@ function toggleGuiaImport(){
 }
 
 // Mostrar badge de detecção antes de processar
+let _impArquivosAtivos=[]; // lista global de arquivos carregados com bancoCfg
+
 function impMostrarDeteccao(lista){
+  _impArquivosAtivos=lista; // guardar para remoção por X
   const badge=document.getElementById('impDeteccaoBadge');
   if(!badge)return;
   const INFOS={
-    'nubank':  {cor:'#820AD1',bg:'rgba(130,10,209,.08)',key:'nubank'},
-    'bb':      {cor:'#003082',bg:'rgba(255,204,0,.15)',key:'bb'},
-    'itau_pdf':{cor:'#EC7000',bg:'rgba(236,112,0,.08)',key:'itau'},
+    'nubank_auto':{cor:'#820AD1',bg:'rgba(130,10,209,.08)',key:'nubank'},
+    'nubank':     {cor:'#820AD1',bg:'rgba(130,10,209,.08)',key:'nubank'},
+    'bb':         {cor:'#003082',bg:'rgba(255,204,0,.15)',key:'bb'},
+    'itau_pdf':   {cor:'#EC7000',bg:'rgba(236,112,0,.08)',key:'itau'},
+    'bradesco_pdf':{cor:'#CC092F',bg:'rgba(204,9,47,.08)',key:'bradesco'},
     'desconhecido':{cor:'var(--am)',bg:'var(--amd)',key:'outro'},
   };
-  const chips=lista.map(({file,bancoCfg})=>{
+  const chips=lista.map(({file,bancoCfg},idx)=>{
     const info=INFOS[bancoCfg.tipo]||INFOS['desconhecido'];
-    const fmt=bancoCfg.tipo==='itau_pdf'?'PDF':'CSV';
+    const fmtTipo=bancoCfg.tipo.includes('pdf')?'PDF':'CSV';
     const logo=`<img src="${BANK_LOGOS[info.key]||BANK_LOGOS.outro}" width="18" height="18" style="border-radius:4px;vertical-align:middle;flex-shrink:0"/>`;
     const status=bancoCfg.detectado
-      ?`<span style="display:flex;align-items:center;gap:5px;color:${info.cor};font-weight:700">${logo} ${bancoCfg.banco} (${fmt})</span>`
-      :`<span style="color:var(--am);font-weight:700">❓ ${file.name} — não reconhecido</span>`;
-    return `<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;background:${info.bg};border-radius:6px;font-size:12px;flex-wrap:wrap">
+      ?`<span style="display:flex;align-items:center;gap:5px;color:${info.cor};font-weight:700">${logo} ${bancoCfg.banco} (${fmtTipo})</span>`
+      :`<span style="color:var(--am);font-weight:700">❓ não reconhecido</span>`;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:${info.bg};border-radius:8px;font-size:12px;flex-wrap:wrap;width:100%">
       ${status}
-      <span style="color:var(--t3);font-size:11px">${file.name}</span>
+      <span style="color:var(--t3);font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${file.name}</span>
+      <button onclick="impRemoverArquivo(${idx})" title="Remover este arquivo" style="background:none;border:none;color:var(--t3);font-size:16px;line-height:1;cursor:pointer;padding:2px 4px;border-radius:4px;flex-shrink:0" onmouseover="this.style.color='var(--re)'" onmouseout="this.style.color='var(--t3)'">×</button>
     </div>`;
   }).join('');
   badge.style.display='flex';
-  badge.innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;width:100%">Detectado:</div>${chips}`;
+  badge.style.flexDirection='column';
+  badge.style.gap='6px';
+  badge.innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px">Arquivos detectados:</div>${chips}`;
+}
+
+async function impRemoverArquivo(idx){
+  _impArquivosAtivos.splice(idx,1);
+  _impDados=[];
+  if(_impArquivosAtivos.length===0){
+    // Sem arquivos — resetar
+    const badge=document.getElementById('impDeteccaoBadge');
+    if(badge) badge.style.display='none';
+    document.getElementById('impPreview').style.display='none';
+    document.getElementById('impFileInput').value='';
+    window._impUltimoBancoCfg=null;
+    return;
+  }
+  // Reprocessar arquivos restantes
+  impMostrarDeteccao(_impArquivosAtivos);
+  await impProcessarArquivos(_impArquivosAtivos);
 }
 
 // Validar conteúdo do arquivo vs banco esperado
@@ -4036,9 +4115,9 @@ function impMostrarPreview(){
         <div style="margin-top:10px;padding:10px 12px;background:var(--ci);border-radius:var(--rs);border:1px solid var(--b)">
           <div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Saldo atual em conta${labelExtra}</div>
           <div style="font-size:11px;color:var(--t3);margin-bottom:6px">O extrato não contém saldo absoluto. Informe para acompanhamento correto (opcional).</div>
-          <input id="impSaldoManual" type="number" step="0.01" placeholder="Ex: 1250.00"
+          <input id="impSaldoManual" type="number" step="0.01" min="0" placeholder="Ex: 1250.00"
             style="width:100%;padding:8px 10px;background:var(--card);border:1.5px solid var(--b);border-radius:var(--rx);color:var(--t);font-size:15px;font-family:var(--mono);outline:none"
-            oninput="window._impUltimoBancoCfg._saldoManual=parseFloat(this.value)||null"/>
+            oninput="const v=parseFloat(this.value);window._impUltimoBancoCfg._saldoManual=(this.value===''||isNaN(v)||v<0)?null:v;if(v<0)this.value='';"/>
         </div>`;
     }
   }
