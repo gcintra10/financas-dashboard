@@ -189,7 +189,7 @@ input,select,textarea{font-family:var(--font)}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
 /* ══ KPI CARDS ═══════════════════════════════════════════ */
-.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:20px}
 .kpi{background:var(--card);border-radius:var(--r);padding:20px;border:1px solid var(--b);box-shadow:var(--sh);position:relative;overflow:hidden;transition:box-shadow var(--dur),transform var(--dur)}
 .kpi:hover{box-shadow:var(--shm);transform:translateY(-2px)}
 .kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--r) var(--r) 0 0}
@@ -4337,16 +4337,15 @@ function renderEvolChart(){
   if(!ctx)return;
 
   if(_evolMode==='barras'){
-    const maxV=Math.max(...d.hist.map(h=>Math.max(h.receita,h.despesa)),1)*1.12;
+    const maxV=Math.max(...d.hist.map(h=>Math.max(h.receita,h.despesa)),1)*1.15;
     const onClickMes=(evt,els)=>{if(!els.length)return;const idx=els[0].index;const h=d.hist[idx];if(!h)return;const parts=h.mes.split('/');if(parts.length===2){const mi=MC.indexOf(parts[0]);const ai=parseInt(parts[1]);if(mi>=0&&ai){ST.mesIdx=mi;ST.ano=ai;atualizarLbl();carregarDados();}}};
-    // Destacar mês atual com opacidade plena, demais em 55%
     const mesAtualLabel=MC[ST.mesIdx]+'/'+ST.ano;
-    // Sem border, só fill — mês atual sólido, passados muito transparentes
-    const bgReceita=d.hist.map(h=>h.mes===mesAtualLabel?gc('gr')+'BB':gc('gr')+'20');
-    const bgDespesa=d.hist.map(h=>h.mes===mesAtualLabel?gc('re')+'BB':gc('re')+'20');
+    // Cores sólidas — mês atual 100%, passados 55% opacidade
+    const bgReceita=d.hist.map(h=>h.mes===mesAtualLabel?gc('gr')+'FF':gc('gr')+'8C');
+    const bgDespesa=d.hist.map(h=>h.mes===mesAtualLabel?gc('re')+'FF':gc('re')+'8C');
     charts['cL']=new Chart(ctx,{type:'bar',data:{labels:d.hist.map(h=>h.mes),datasets:[
-      {label:'Receita',data:d.hist.map(h=>h.receita),backgroundColor:bgReceita,borderWidth:0,borderRadius:10,borderSkipped:false,barPercentage:.35,categoryPercentage:.85,datalabels:{display:false}},
-      {label:'Despesa',data:d.hist.map(h=>h.despesa),backgroundColor:bgDespesa,borderWidth:0,borderRadius:10,borderSkipped:false,barPercentage:.35,categoryPercentage:.85,datalabels:{display:false}},
+      {label:'Receita',data:d.hist.map(h=>h.receita),backgroundColor:bgReceita,borderWidth:0,borderRadius:6,borderSkipped:false,barPercentage:.42,categoryPercentage:.82,datalabels:{display:false}},
+      {label:'Despesa',data:d.hist.map(h=>h.despesa),backgroundColor:bgDespesa,borderWidth:0,borderRadius:6,borderSkipped:false,barPercentage:.42,categoryPercentage:.82,datalabels:{display:false}},
     ]},options:{responsive:true,maintainAspectRatio:false,onClick:onClickMes,
       onHover:(e)=>{e.native.target.style.cursor=e.chart.getElementsAtEventForMode(e.native,'nearest',{intersect:true},false).length?'pointer':'default';},
       plugins:{
@@ -4361,8 +4360,8 @@ function renderEvolChart(){
               font:(c)=>({size:11,weight:d.hist[c.index]?.mes===mesAtualLabel?'600':'400'})},
           grid:{display:false},border:{display:false}},
         y:{min:0,max:maxV,
-          ticks:{color:gc('t3'),font:{size:10},callback:v=>v===0?'':('R$'+(v/1000).toFixed(0)+'k'),maxTicksLimit:4},
-          grid:{color:gc('b')+'35',lineWidth:.5},border:{display:false}}
+          ticks:{color:gc('t3'),font:{size:10},callback:v=>v===0?'':('R$'+(v/1000).toFixed(0)+'k'),maxTicksLimit:5},
+          grid:{color:gc('b')+'55',lineWidth:.8,borderDash:[4,4]},border:{display:false}}
       },
       layout:{padding:{top:10,bottom:0}}
     }});
