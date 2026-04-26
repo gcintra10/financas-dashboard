@@ -645,13 +645,16 @@ tbody tr:hover td{background:var(--ci)}
 <div class="ob-overlay hidden" id="obOv">
   <div class="ob-shell">
     <div class="ob-header">
-      <div class="ob-step-bar">
-        <div class="ob-step active" id="obst-0"></div>
-        <div class="ob-step" id="obst-1"></div>
-        <div class="ob-step" id="obst-2"></div>
-        <div class="ob-step" id="obst-3"></div>
-        <div class="ob-step" id="obst-4"></div>
-        <div class="ob-step" id="obst-5"></div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <div class="ob-step-bar" style="flex:1">
+          <div class="ob-step active" id="obst-0"></div>
+          <div class="ob-step" id="obst-1"></div>
+          <div class="ob-step" id="obst-2"></div>
+          <div class="ob-step" id="obst-3"></div>
+          <div class="ob-step" id="obst-4"></div>
+          <div class="ob-step" id="obst-5"></div>
+        </div>
+        <button onclick="fecharOBComConfirm()" title="Voltar ao dashboard" style="background:none;border:none;color:var(--t3);font-size:22px;line-height:1;cursor:pointer;margin-left:12px;padding:2px 6px;border-radius:6px;transition:color var(--dur)" onmouseover="this.style.color='var(--re)'" onmouseout="this.style.color='var(--t3)'">×</button>
       </div>
       <div class="ob-eyebrow" id="ob-eyebrow">Passo 1 de 5</div>
       <div class="ob-title" id="ob-title">Sua renda mensal</div>
@@ -1031,10 +1034,13 @@ window.addEventListener('DOMContentLoaded',()=>{
   // Verificar se já está logado nessa sessão
   const sessaoUsuario=localStorage.getItem('fin_sessao_usuario');
   if(sessaoUsuario){
-    // Restaurar dados do usuário do localStorage (cache)
-    const uBase=USUARIOS.find(u=>u.id===sessaoUsuario)||USUARIOS[0];
+    // Restaurar dados completos do usuário (salvos no login)
+    let uBase=null;
+    try{ uBase=JSON.parse(ls('fin_sessao_dados')||'null'); }catch{}
+    if(!uBase) uBase=USUARIOS.find(u=>u.id===sessaoUsuario)||USUARIOS[0];
     const nomeLocal=ls('fin_nome_'+sessaoUsuario);
-    USUARIO_ATUAL={...uBase,nome:nomeLocal||uBase.nome};
+    if(nomeLocal) uBase.nome=nomeLocal;
+    USUARIO_ATUAL=uBase;
     atualizarUsuarioUI();
     const tema=ls('fin_tema')||'light';
     document.documentElement.setAttribute('data-theme',tema);
@@ -1178,6 +1184,16 @@ function abrirOnboarding(){
   obRender();
 }
 function fecharOB(){document.getElementById('obOv').classList.add('hidden');}
+function fecharOBComConfirm(){
+  // Se já passou do primeiro passo, confirmar antes de sair
+  if(OB.step>0){
+    if(!confirm('Sair do cadastro? As alterações desta sessão serão perdidas. Você pode voltar depois em "Editar perfil".')) return;
+  }
+  fecharOB();
+  // Se já tem dados carregados, volta ao dashboard; senão carrega
+  if(ST.dados) return;
+  if(CFG.sheetId&&CFG.scriptUrl) carregarDados();
+}
 
 function obRender(){
   const s=OB.step;
@@ -1753,11 +1769,18 @@ async function marcarPrimeiroLoginConcluido(userId){
   const url=CFG.scriptUrl||'https://script.google.com/macros/s/AKfycbyGuUVEXUu24lzgeHx_Qhl5eZ2bEvNZ8AAP5MUJqxDfxjJX3RGQNrQF7KBVObJVh8bt/exec';
   const secret=CFG.secret||'financas2024';
   try{
-    await fetch(url,{
+    const resp=await fetch(url,{
       method:'POST',
       headers:{'Content-Type':'text/plain'},
       body:JSON.stringify({action:'marcarPrimeiroLogin',acao:'marcarPrimeiroLogin',userId,secret})
     });
+    const data=await resp.json();
+    if(data.erro) console.warn('[login] marcarPrimeiroLogin erro do servidor:',data.erro);
+    else {
+      console.log('[login] Primeiro login marcado com sucesso para:',userId);
+      // Invalidar cache de usuários para forçar re-fetch com primeiroLogin=FALSE
+      localStorage.removeItem('fin_usuarios_cache');
+    }
   }catch(e){console.warn('[login] marcarPrimeiroLogin falhou:',e);}
 }
 
@@ -1771,11 +1794,15 @@ function loginFinalizarCadastro(pular=false){
 }
 
 function loginEntrar(usuario){
-  // Sobrescrever nome local se tiver salvo
   const nomeLocal=ls('fin_nome_'+usuario.id);
   if(nomeLocal) usuario.nome=nomeLocal;
   USUARIO_ATUAL=usuario;
   localStorage.setItem('fin_sessao_usuario',usuario.id);
+  // Salvar dados completos para restaurar a sessão sem re-fetch ao recarregar
+  lss('fin_sessao_dados',JSON.stringify({
+    id:usuario.id,nome:usuario.nome,email:usuario.email||'',
+    cor:usuario.cor||'',aba:usuario.aba||'Transações',inicial:usuario.inicial||'?',foto:usuario.foto||''
+  }));
   document.getElementById('loginOv').classList.add('hidden');
   atualizarUsuarioUI();
   if(!CFG.sheetId||!CFG.scriptUrl){
@@ -2399,6 +2426,7 @@ function rVisao(){
         </div>
       </div>
       <div class="cw h220"><canvas id="cL"></canvas></div>
+      <div id="cL-legend" style="display:flex;align-items:center;justify-content:center;padding:8px 0 2px;gap:0"></div>
     </div>
     <div class="cc">
       <div class="cc-hd">
@@ -2794,9 +2822,39 @@ function rIns(){
   if(altas>0) pillsI.push({cls:'re',icon:'🔴',txt:`${altas} alerta(s) de alta prioridade`});
   if(d.iArr.length>0) pillsI.push({cls:'ac',icon:'🤖',txt:`${d.iArr.length} insights gerados`});
   if(d.iArr.length===0) pillsI.push({cls:'nu',icon:'⏳',txt:'Aguardando próxima análise (03:00)'});
+
+  // Última atualização — pegar data do insight mais recente
+  let ultimaAtuStr='Ainda não gerado';
+  if(d.iArr.length>0&&d.iArr[0].data){
+    try{
+      const dt=d.iArr[0].data instanceof Date?d.iArr[0].data:new Date(d.iArr[0].data);
+      if(!isNaN(dt)){
+        const agora=new Date();
+        const diffMin=Math.round((agora-dt)/60000);
+        const diffH=Math.round(diffMin/60);
+        const diffD=Math.round(diffH/24);
+        const relativo=diffMin<2?'Agora mesmo':diffMin<60?`Há ${diffMin} min`:diffH<24?`Há ${diffH}h`:diffD===1?'Ontem':`Há ${diffD} dias`;
+        const dtFmt=dt.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+        const hrFmt=dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+        ultimaAtuStr=`${relativo} · ${dtFmt} às ${hrFmt}`;
+      }
+    }catch{}
+  }
+
   let html=`
-  ${pillsI.length>0?`<div class="ip-row">${pillsI.map(p=>`<span class="ip ${p.cls}"><span class="ip-icon">${p.icon}</span>${p.txt}</span>`).join('')}</div>`:''}
-  <div style="font-size:13px;color:var(--t2);margin-bottom:16px">Gerados automaticamente às 03:00 com base nos seus dados reais.</div>`;
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+    <div>
+      ${pillsI.length>0?`<div class="ip-row" style="margin-bottom:8px">${pillsI.map(p=>`<span class="ip ${p.cls}"><span class="ip-icon">${p.icon}</span>${p.txt}</span>`).join('')}</div>`:''}
+      <div style="font-size:13px;color:var(--t2)">Gerados automaticamente às 03:00 com base nos seus dados reais.</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--ci);border-radius:var(--rs);border:1px solid var(--b)">
+      <span style="font-size:14px">🕐</span>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px">Última análise</div>
+        <div style="font-size:12px;font-weight:600;color:var(--t)">${ultimaAtuStr}</div>
+      </div>
+    </div>
+  </div>`;
   if(!d.iArr||d.iArr.length===0){html+=`<div class="empty">🤖<br>Ainda sem insights. Aparecem após a primeira análise noturna.</div>`;}
   else{html+=`<div class="ins-g">`;d.iArr.forEach(i=>{const p=(i.prioridade||'').toLowerCase().substring(0,2);const c=i.tipo==='Investimento'?'iv':p==='al'?'al':p==='mé'||p==='me'?'md':p==='in'?'in':'bx';html+=`<div class="ins-c ${c}"><span class="ins-bd ${c}">${i.tipo||'Análise'}</span><div class="ins-ti">${i.titulo||''}</div><div class="ins-tx">${i.analise||''}</div>${i.acao?`<div class="ins-ac">→ ${i.acao}</div>`:''}</div>`;});html+=`</div>`;}
   document.getElementById('sec-ins').innerHTML=html;
@@ -2865,8 +2923,49 @@ function rEstab(){
   const d=ST.dados;
   let html='';
   if(d.naoMap.length>0){html+=`<div class="ea">⚠️ <strong>${d.naoMap.length} estabelecimento(s)</strong> para mapear na aba Estabelecimentos do Sheets</div>`;}
-  html+=`<div class="cc" style="padding:0"><div style="padding:16px 20px"><div class="cc-ti">Todos os estabelecimentos (${d.eArr.length})</div></div><div class="tw"><table><thead><tr><th>Estabelecimento</th><th>Pilar</th><th>Categoria</th><th>Aparições</th><th>Status</th></tr></thead><tbody>${d.eArr.map(e=>`<tr><td>${e.amigavel||e.nome}</td><td><span class="pill ${PP[e.pilar]||'pe'}">${e.pilar}</span></td><td style="color:var(--t2)">${e.cat}</td><td style="font-family:var(--mono);color:var(--t3)">${e.vezes}x</td><td><span class="pill ${e.mapeado==='Sim'?'pi':'pe'}">${e.mapeado==='Sim'?'✓ Mapeado':'Mapear'}</span></td></tr>`).join('')}</tbody></table></div></div>`;
+  html+=`<div class="cc" style="padding:0">
+    <div style="padding:16px 20px 12px">
+      <div class="cc-ti" style="margin-bottom:12px">Todos os estabelecimentos (${d.eArr.length})</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end">
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Estabelecimento</div>
+          <input id="estFiltNome" type="text" placeholder="Buscar..." oninput="filtrarEstab()"
+            style="width:100%;padding:7px 10px;background:var(--ci);border:1px solid var(--b);border-radius:var(--rx);color:var(--t);font-size:12px;outline:none;font-family:var(--font)"/>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Pilar</div>
+          <select id="estFiltPilar" onchange="filtrarEstab()"
+            style="width:100%;padding:7px 10px;background:var(--ci);border:1px solid var(--b);border-radius:var(--rx);color:var(--t2);font-size:12px;outline:none;font-family:var(--font)">
+            <option value="">Todos os pilares</option>
+            ${Object.keys(PM).map(p=>`<option value="${p}">${PI[p]} ${p}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Status</div>
+          <select id="estFiltStatus" onchange="filtrarEstab()"
+            style="width:100%;padding:7px 10px;background:var(--ci);border:1px solid var(--b);border-radius:var(--rx);color:var(--t2);font-size:12px;outline:none;font-family:var(--font)">
+            <option value="">Todos</option>
+            <option value="Sim">✓ Mapeado</option>
+            <option value="Não">⚠ Mapear</option>
+          </select>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Aparições</div>
+          <select id="estFiltApar" onchange="filtrarEstab()"
+            style="padding:7px 10px;background:var(--ci);border:1px solid var(--b);border-radius:var(--rx);color:var(--t2);font-size:12px;outline:none;font-family:var(--font)">
+            <option value="">Todas</option>
+            <option value="5">5+</option>
+            <option value="10">10+</option>
+            <option value="20">20+</option>
+          </select>
+        </div>
+      </div>
+      <div id="estFiltCount" style="font-size:11px;color:var(--t3);margin-top:8px"></div>
+    </div>
+    <div class="tw"><table id="estabTable"><thead><tr><th>Estabelecimento</th><th>Pilar</th><th>Categoria</th><th>Aparições</th><th>Status</th></tr></thead>
+    <tbody id="estabBody">${renderEstabRows(d.eArr)}</tbody></table></div></div>`;
   document.getElementById('sec-estab').innerHTML=html;
+  filtrarEstab();
 }
 
 // ══ ENGINE DE IMPORTAÇÃO ════════════════════════════════════
@@ -3036,51 +3135,55 @@ async function impParseItauPDF(file, bancoCfg){
 
 function impParseItauTexto(texto, bancoCfg){
   const rows=[];
-  const mc=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const linhas=texto.split('\n');
-  // Regex para linha de transação: dd/mm/yyyy + descrição + valor (−xxx,xx ou xxx,xx)
-  // Exemplos do extrato real:
-  //   22/04/2026  PIX QRS IFOOD.COM A21/04  -12,90
-  //   01/04/2026  PAGTO SALARIO  6.670,86
   const reData=/^(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+([-−]?\d{1,3}(?:\.\d{3})*,\d{2})\s*$/;
+  // Saldo do dia: capturar o primeiro "SALDO DO DIA" que aparece (mais recente)
+  const reSaldo=/^(\d{2}\/\d{2}\/\d{4})\s+SALDO DO DIA\s+(\d{1,3}(?:\.\d{3})*,\d{2})\s*$/i;
 
-  // Lista de lançamentos a IGNORAR
   const ignore=[
     'saldo do dia','rend pago aplic','saldo anterior',
-    '51.276',          // PIX para conta PJ própria
-    'gabriel cintra',  // pagamentos para si mesmo
-    'rafael',          // transferência para irmão (se quiser trackear, remover)
+    '51.276',        // PIX conta PJ própria
+    'gabriel cintra',// pagamento para si mesmo
   ];
-  // Lista de lançamentos que são RECEITA
-  const receita=['pagto salario','salario','receita','pix transf renata','deposito'];
+  const isReceitaDesc=(tl)=>[
+    'pagto salario','pagamento salario','salario','receita',
+    'deposito','pix transf renata','transferencia recebida','credito'
+  ].some(r=>tl.includes(r));
+
+  let saldoAtual=null;
 
   for(const linha of linhas){
+    // Capturar saldo mais recente
+    if(saldoAtual===null){
+      const ms=linha.match(reSaldo);
+      if(ms){
+        const v=ms[2].replace(/\./g,'').replace(',','.');
+        saldoAtual=parseFloat(v);
+      }
+    }
+
     const m=linha.match(reData);
     if(!m)continue;
     const [,dataStr,descRaw,valorStr]=m;
     const desc=descRaw.trim();
     const tl=desc.toLowerCase();
 
-    // Ignorar internos
     if(ignore.some(ig=>tl.includes(ig)))continue;
 
-    // Parsear valor (suporta −/-)
     const vStr=valorStr.replace('−','-').replace(/\./g,'').replace(',','.');
     const valor=parseFloat(vStr);
     if(isNaN(valor)||valor===0)continue;
 
-    const isReceita=valor>0||receita.some(r=>tl.includes(r));
+    // No Itaú: valor positivo = crédito (receita), negativo = débito (despesa)
+    const isReceita=valor>0||isReceitaDesc(tl);
 
-    // Data → ISO para cálculos
     const [dd,mm,yyyy]=dataStr.split('/');
     const dataISO=`${yyyy}-${mm}-${dd}`;
-    const dataFmt=dataStr; // DD/MM/YYYY
-
     const cls=impClassificar(desc);
     const mesStr=impMesDireto(dataISO);
 
     rows.push({
-      data:dataFmt,
+      data:dataStr,
       desc,
       valor:isReceita?Math.abs(valor):-Math.abs(valor),
       tipo:isReceita?'Receita':'Despesa',
@@ -3092,6 +3195,9 @@ function impParseItauTexto(texto, bancoCfg){
       obs:'Importado Itaú PDF',
     });
   }
+
+  // Guardar saldo capturado para exibir no preview
+  if(saldoAtual!==null) bancoCfg._saldoCapturado=saldoAtual;
   return rows;
 }
 
@@ -3406,6 +3512,7 @@ async function impProcessarArquivos(lista){
       rows=impParseBB(text,bancoCfg);
     }
     else if(bancoCfg.tipo==='itau_pdf') rows=await impParseItauPDF(file,bancoCfg);
+    window._impUltimoBancoCfg=bancoCfg; // preservar saldo capturado
     _impDados.push(...rows);
   }
 
@@ -3466,9 +3573,16 @@ function impMostrarPreview(){
   const meses=[...new Set(_impDados.map(r=>r.mes))];
   document.getElementById('impPeriodo').textContent=meses.join(', ');
   
-  // Banco tag
-  const bancos=[...new Set(_impDados.map(r=>r.banco))];
-  document.getElementById('impBancoTag').textContent=bancos.join(' + ');
+  // Saldo capturado do extrato (Itaú PDF)
+  const saldoCapt=_impDados.find(r=>r._saldoCapturado)?.noop; // não existe, pegar do bancoCfg
+  // Buscar no objeto global _impBancoCfgs se disponível
+  let saldoInfo='';
+  if(window._impUltimoBancoCfg&&window._impUltimoBancoCfg._saldoCapturado!=null){
+    saldoInfo=`<div style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:var(--gd);border-radius:6px;font-size:12px;margin-top:6px">
+      <span style="color:var(--gr);font-weight:700">💰 Saldo extrato: ${fmt(window._impUltimoBancoCfg._saldoCapturado)}</span>
+    </div>`;
+  }
+  document.getElementById('impBancoTag').innerHTML=(bancos.join(' + '))+(saldoInfo?'<br>'+saldoInfo:'');
   
   // Conflitos
   const confEl=document.getElementById('impConflicts');
@@ -3675,12 +3789,29 @@ function renderEvolChart(){
     const onClickMes=(evt,els)=>{if(!els.length)return;const idx=els[0].index;const h=d.hist[idx];if(!h)return;const parts=h.mes.split('/');if(parts.length===2){const mi=MC.indexOf(parts[0]);const ai=parseInt(parts[1]);if(mi>=0&&ai){ST.mesIdx=mi;ST.ano=ai;atualizarLbl();carregarDados();}}};
     // Destacar mês atual com opacidade plena, demais em 55%
     const mesAtualLabel=MC[ST.mesIdx]+'/'+ST.ano;
-    const bgReceita=d.hist.map(h=>h.mes===mesAtualLabel?gc('gr')+'DD':gc('gr')+'44');
-    const bgDespesa=d.hist.map(h=>h.mes===mesAtualLabel?gc('re')+'DD':gc('re')+'44');
+    const bgReceita=d.hist.map(h=>h.mes===mesAtualLabel?gc('gr')+'EE':gc('gr')+'28');
+    const bgDespesa=d.hist.map(h=>h.mes===mesAtualLabel?gc('re')+'EE':gc('re')+'28');
+    const bdReceita=d.hist.map(h=>h.mes===mesAtualLabel?gc('gr'):gc('gr')+'55');
+    const bdDespesa=d.hist.map(h=>h.mes===mesAtualLabel?gc('re'):gc('re')+'55');
     charts['cL']=new Chart(ctx,{type:'bar',data:{labels:d.hist.map(h=>h.mes),datasets:[
-      {label:'Receita',data:d.hist.map(h=>h.receita),backgroundColor:bgReceita,borderColor:gc('gr'),borderWidth:1.5,borderRadius:5,borderSkipped:false,barPercentage:.45,categoryPercentage:.85,datalabels:{display:false}},
-      {label:'Despesa',data:d.hist.map(h=>h.despesa),backgroundColor:bgDespesa,borderColor:gc('re'),borderWidth:1.5,borderRadius:5,borderSkipped:false,barPercentage:.45,categoryPercentage:.85,datalabels:{display:false}},
-    ]},options:{responsive:true,maintainAspectRatio:false,onClick:onClickMes,onHover:(e)=>{e.native.target.style.cursor=e.chart.getElementsAtEventForMode(e.native,'nearest',{intersect:true},false).length?'pointer':'default';},plugins:{legend:{labels:{color:gc('t2'),font:{size:11},boxWidth:8,padding:8}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmt(c.raw)} · clique para navegar`}},datalabels:{display:false}},scales:{x:{ticks:{color:(ctx2)=>d.hist[ctx2.index]?.mes===mesAtualLabel?gc('t'):gc('t2'),font:(ctx2)=>({size:11,weight:d.hist[ctx2.index]?.mes===mesAtualLabel?'700':'400'})},grid:{display:false},border:{display:false}},y:{min:0,max:maxV,ticks:{color:gc('t2'),font:{size:11},callback:v=>'R$'+(v/1000).toFixed(0)+'k',maxTicksLimit:5},grid:{color:gc('b')},border:{display:false}}},layout:{padding:{top:8}}}});
+      {label:'Receita',data:d.hist.map(h=>h.receita),backgroundColor:bgReceita,borderColor:bdReceita,borderWidth:1.5,borderRadius:8,borderSkipped:false,barPercentage:.38,categoryPercentage:.9,datalabels:{display:false}},
+      {label:'Despesa',data:d.hist.map(h=>h.despesa),backgroundColor:bgDespesa,borderColor:bdDespesa,borderWidth:1.5,borderRadius:8,borderSkipped:false,barPercentage:.38,categoryPercentage:.9,datalabels:{display:false}},
+    ]},options:{responsive:true,maintainAspectRatio:false,onClick:onClickMes,
+      onHover:(e)=>{e.native.target.style.cursor=e.chart.getElementsAtEventForMode(e.native,'nearest',{intersect:true},false).length?'pointer':'default';},
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmt(c.raw)}`},backgroundColor:'rgba(0,0,0,.8)',titleFont:{size:11},bodyFont:{size:12},padding:10,cornerRadius:8},
+        datalabels:{display:false}
+      },
+      scales:{
+        x:{ticks:{color:(ctx2)=>d.hist[ctx2.index]?.mes===mesAtualLabel?gc('t'):gc('t3'),font:(ctx2)=>({size:11,weight:d.hist[ctx2.index]?.mes===mesAtualLabel?'700':'400'})},grid:{display:false},border:{display:false}},
+        y:{min:0,max:maxV,ticks:{color:gc('t3'),font:{size:10},callback:v=>'R$'+(v/1000).toFixed(0)+'k',maxTicksLimit:5},grid:{color:gc('b')+'70',lineWidth:.8},border:{display:false}}
+      },
+      layout:{padding:{top:4}}
+    }});
+    // Legenda inline sob o chart
+    const legEl=document.getElementById('cL-legend');
+    if(legEl)legEl.innerHTML=`<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:3px;display:inline-block;background:${gc('gr')}"></span><span style="font-size:11px;color:var(--t2)">Receita</span></span><span style="display:inline-flex;align-items:center;gap:4px;margin-left:12px"><span style="width:10px;height:10px;border-radius:3px;display:inline-block;background:${gc('re')}"></span><span style="font-size:11px;color:var(--t2)">Despesa</span></span>`;
   }
   else if(_evolMode==='saldo'){
     const saldos=d.hist.map(h=>h.saldo);
@@ -3791,7 +3922,37 @@ function renderTransRows(rows){
   </tr>`).join('');
 }
 
-// ══ CHART CAT TOGGLE ════════════════════════════════════════
+function renderEstabRows(arr){
+  if(!arr.length) return `<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--t3)">Nenhum resultado</td></tr>`;
+  return arr.map(e=>`<tr>
+    <td style="font-weight:500">${e.amigavel||e.nome}</td>
+    <td><span class="pill ${PP[e.pilar]||'pe'}">${e.pilar||'—'}</span></td>
+    <td style="color:var(--t2)">${e.cat||'—'}</td>
+    <td style="font-family:var(--mono);color:var(--t3);text-align:center">${e.vezes}x</td>
+    <td><span class="pill ${e.mapeado==='Sim'?'pi':'pe'}">${e.mapeado==='Sim'?'✓ Mapeado':'⚠ Mapear'}</span></td>
+  </tr>`).join('');
+}
+
+function filtrarEstab(){
+  if(!ST.dados) return;
+  const nome=(document.getElementById('estFiltNome')?.value||'').toLowerCase();
+  const pilar=document.getElementById('estFiltPilar')?.value||'';
+  const status=document.getElementById('estFiltStatus')?.value||'';
+  const aparMin=parseInt(document.getElementById('estFiltApar')?.value||0)||0;
+
+  const filtrados=ST.dados.eArr.filter(e=>{
+    if(nome&&!(e.amigavel||e.nome||'').toLowerCase().includes(nome))return false;
+    if(pilar&&e.pilar!==pilar)return false;
+    if(status&&e.mapeado!==status)return false;
+    if(aparMin&&e.vezes<aparMin)return false;
+    return true;
+  });
+
+  const body=document.getElementById('estabBody');
+  const cnt=document.getElementById('estFiltCount');
+  if(body) body.innerHTML=renderEstabRows(filtrados);
+  if(cnt) cnt.textContent=`${filtrados.length} de ${ST.dados.eArr.length} estabelecimentos`;
+}
 let chartTipo='barras';
 function setChartTipo(tipo){
   chartTipo=tipo;
