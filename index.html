@@ -234,11 +234,10 @@ input,select,textarea{font-family:var(--font)}
 
 /* ══ PROJEÇÃO FORECAST ═══════════════════════════════════ */
 .proj-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
-.proj-c{background:var(--ci);border:1px solid var(--b);border-radius:var(--rs);padding:16px;transition:all var(--dur);position:relative;overflow:hidden}
-.proj-c:hover{border-color:var(--ac);box-shadow:var(--sh)}
-.proj-c::before{content:'';position:absolute;bottom:0;left:0;right:0;height:3px}
-.proj-c.pos::before{background:linear-gradient(90deg,var(--gr),#6EE7B7)}
-.proj-c.neg::before{background:linear-gradient(90deg,var(--re),#FCA5A5)}
+.proj-c{background:var(--ci);border:1px solid var(--b);border-radius:var(--rs);padding:16px;transition:all var(--dur)}
+.proj-c:hover{border-color:var(--ac)}
+.proj-c.pos{border-left:3px solid var(--gr)}
+.proj-c.neg{border-left:3px solid var(--re)}
 .proj-mo{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--t3);margin-bottom:8px}
 .proj-vl{font-size:22px;font-weight:700;font-family:var(--mono);letter-spacing:-1px;margin-bottom:6px}
 .proj-bar{height:4px;background:var(--b2);border-radius:2px;overflow:hidden;margin-bottom:10px}
@@ -2301,6 +2300,7 @@ function rVisao(){
   ${d.naoMap.length>0?`<div class="alert-bar" onclick="nav('estab',document.querySelector('[onclick*=estab]'))">⚠️ <strong>${d.naoMap.length} estabelecimento(s)</strong> aguardando mapeamento</div>`:''}
   ${pills.length>0?`<div class="ip-row">${pills.map(p=>`<span class="ip ${p.cls}"><span class="ip-icon">${p.icon}</span>${p.txt}</span>`).join('')}</div>`:''}
   <div class="kpi-row">
+    ${rSaldoContas()}
     <div class="kpi k-gr">
       <div class="kpi-top"><div class="kpi-ic gr">💰</div><span class="kpi-badge ${d.rec>0?'dn':'nu'}">${d.rec>0?'✓ recebido':'aguardando'}</span></div>
       <div class="kpi-val gr">${fmt(d.rec)}</div>
@@ -3062,7 +3062,39 @@ function impDetectarParcela(titulo){
   return{titulo,atual:null,total:null};
 }
 
-// Calcular mês da fatura Nubank (fecha dia 28)
+// Calcular saldo total em contas (soma dos saldos mais recentes de cada banco)
+function calcSaldoContas(){
+  try{
+    const hist=JSON.parse(ls('fin_saldos_hist')||'{}');
+    let total=0,detalhes=[];
+    for(const [,registros] of Object.entries(hist)){
+      if(registros&&registros.length>0){
+        const rec=registros[0];
+        total+=rec.saldo;
+        detalhes.push(rec);
+      }
+    }
+    return{total,detalhes};
+  }catch{return{total:null,detalhes:[]};}
+}
+
+function rSaldoContas(){
+  const {total,detalhes}=calcSaldoContas();
+  if(total===null||detalhes.length===0) return '';
+  const cor=total>=0?'var(--gr)':'var(--re)';
+  return `<div class="kpi k-gr" style="border-top:3px solid ${cor}">
+    <div class="kpi-top"><div class="kpi-ic" style="background:${cor}22">🏦</div><span class="kpi-badge nu">${detalhes.length} conta(s)</span></div>
+    <div class="kpi-val" style="color:${cor}">${fmt(total)}</div>
+    <div class="kpi-lbl">Saldo em contas</div>
+    <div class="kpi-detail">
+      ${detalhes.map(d=>`<div class="kpi-detail-row"><span>${d.banco}</span><span class="kpi-detail-val" style="color:${d.saldo>=0?'var(--gr)':'var(--re)'}">${fmt(d.saldo)}</span></div>`).join('')}
+      <div class="kpi-detail-row" style="border-top:1px solid var(--b);margin-top:4px;padding-top:4px">
+        <span style="font-size:10px;color:var(--t3)">Atualizado ao importar extrato</span>
+      </div>
+    </div>
+    <div class="kpi-mini-bar"><div class="kpi-mini-fill" style="width:100%;background:${cor}"></div></div>
+  </div>`;
+}
 function impMesFatura(dataStr,fechDia=28){
   const d=new Date(dataStr+'T12:00:00');
   const mc=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -3088,15 +3120,240 @@ function impDeveIgnorar(titulo, valor){
 // Detectar banco pelo nome do arquivo
 function impDetectarBanco(nomeArquivo){
   const n=nomeArquivo.toLowerCase();
-  if(n.includes('[pf]')||n.includes('_pf_')||n.includes('-pf-')) return{banco:'Nubank PF',meio:'Crédito Nubank PF',tipo:'nubank',fech:28,vc:5,detectado:true};
-  if(n.includes('[pj]')||n.includes('_pj_')||n.includes('-pj-')) return{banco:'Nubank PJ',meio:'Crédito Nubank PJ',tipo:'nubank',fech:28,vc:10,detectado:true};
-  if(n.includes('itau')||n.includes('itaú')) return{banco:'Itaú',meio:'Débito',tipo:'itau_pdf',fech:0,vc:0,detectado:true};
+  // PF/PJ pode ser cartão ou conta — diferenciamos pelo cabeçalho CSV em impParseNubankAuto
+  if(n.includes('[pf]')||n.includes('_pf_')||n.includes('-pf-')) return{banco:'Nubank PF',meio:'Nubank PF',tipo:'nubank_auto',fech:28,vc:5,detectado:true};
+  if(n.includes('[pj]')||n.includes('_pj_')||n.includes('-pj-')) return{banco:'Nubank PJ',meio:'Nubank PJ',tipo:'nubank_auto',fech:28,vc:10,detectado:true};
+  if(n.includes('itau')||n.includes('itaú')) return{banco:'Itaú',meio:'Débito Itaú',tipo:'itau_pdf',fech:0,vc:0,detectado:true};
+  if((n.includes('bradesco'))&&n.endsWith('.pdf')) return{banco:'Bradesco',meio:'Débito Bradesco',tipo:'bradesco_pdf',fech:0,vc:0,detectado:true};
   if(n.includes('bb')||n.includes('brasil')||n.includes('extrato_conta')) return{banco:'Banco do Brasil',meio:'Débito BB',tipo:'bb',fech:0,vc:0,detectado:true};
   if(n.includes('bradesco')) return{banco:'Bradesco',meio:'Crédito Bradesco',tipo:'nubank',fech:15,vc:22,detectado:true};
   if(n.includes('santander')) return{banco:'Santander',meio:'Crédito Santander',tipo:'nubank',fech:10,vc:17,detectado:true};
   if(n.includes('inter')) return{banco:'Inter',meio:'Crédito Inter',tipo:'nubank',fech:7,vc:14,detectado:true};
-  if(n.includes('nubank')||n.includes('nu_')) return{banco:'Nubank',meio:'Crédito Nubank PF',tipo:'nubank',fech:28,vc:5,detectado:false};
+  if(n.includes('nubank')||n.includes('nu_')) return{banco:'Nubank',meio:'Nubank PF',tipo:'nubank_auto',fech:28,vc:5,detectado:false};
   return{banco:'',meio:'',tipo:'desconhecido',fech:28,vc:5,detectado:false};
+}
+
+// ── PARSER NUBANK AUTO (detecta cartão vs conta pelo cabeçalho) ─────────────
+// Conta: Data,Valor,Identificador,Descrição (+/- valores, tem UUID)
+// Cartão: date,title,amount (ou Data,título,valor — sempre positivo = gasto)
+function impParseNubankAuto(csvText, bancoCfg){
+  const lines=csvText.trim().split('\n').filter(l=>l.trim());
+  if(!lines.length) return [];
+  const cab=lines[0].toLowerCase();
+  // Conta tem "identificador" ou UUID no segundo campo
+  const isConta=cab.includes('identificador')||cab.includes('identifier')||
+                (lines[1]&&/[0-9a-f]{8}-[0-9a-f]{4}/i.test(lines[1]));
+  if(isConta){
+    bancoCfg.meio=bancoCfg.banco+' Conta';
+    return impParseNubankConta(csvText, bancoCfg);
+  } else {
+    bancoCfg.meio='Crédito '+bancoCfg.banco;
+    return impParseNubankCartao(csvText, bancoCfg);
+  }
+}
+
+// Nubank CONTA CORRENTE: Data,Valor,Identificador,Descrição
+function impParseNubankConta(csvText, bancoCfg){
+  const rows=[];
+  const lines=csvText.trim().split('\n').filter(l=>l.trim());
+  const inicio=lines[0].toLowerCase().includes('data')||lines[0].toLowerCase().includes('date')?1:0;
+
+  const ignoreDesc=[
+    '51.276',        // transferência para PJ própria
+    'pagamento de fatura','pagamento fatura',
+  ];
+  const isReceitaDesc=(d)=>[
+    'transferência recebida','recebida pelo pix','crédito em conta',
+    'salário','salario','rendimento','deposito','depósito',
+  ].some(r=>d.toLowerCase().includes(r));
+
+  let saldoAcum=null; // calcular saldo ao longo do extrato
+  let saldoInicial=0;
+
+  for(let i=inicio;i<lines.length;i++){
+    // CSV pode ter vírgulas dentro de aspas
+    const cols=impParseCSVLine(lines[i]);
+    if(cols.length<4) continue;
+    const dataRaw=cols[0].trim();
+    const valorRaw=cols[1].trim();
+    const desc=(cols[3]||cols[2]||'').trim();
+
+    if(!dataRaw||!valorRaw||!desc) continue;
+
+    const valor=parseFloat(valorRaw.replace(',','.'));
+    if(isNaN(valor)||valor===0) continue;
+    if(ignoreDesc.some(ig=>desc.toLowerCase().includes(ig))) continue;
+
+    const isReceita=valor>0||isReceitaDesc(desc);
+
+    // Converter data DD/MM/YYYY ou YYYY-MM-DD
+    let dataISO=dataRaw;
+    if(dataRaw.includes('/')){
+      const p=dataRaw.split('/');
+      if(p.length===3) dataISO=p[2].length===4?`${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`:dataRaw;
+    }
+    const dataFmt=dataISO.includes('-')?new Date(dataISO+'T12:00:00').toLocaleDateString('pt-BR'):dataRaw;
+    const mesStr=impMesDireto(dataISO);
+
+    const cls=impClassificar(desc);
+    rows.push({
+      data:dataFmt,
+      desc,
+      valor:isReceita?Math.abs(valor):-Math.abs(valor),
+      tipo:isReceita?'Receita':'Despesa',
+      pilar:isReceita?'Receita':cls.pilar,
+      cat:isReceita?'Salário/Receita':cls.cat,
+      meio:bancoCfg.meio,
+      banco:bancoCfg.banco,
+      mes:mesStr,
+      obs:'Importado Nubank Conta',
+    });
+  }
+
+  // Saldo = soma de todos os valores (relativo ao período do extrato)
+  const saldoPeriodo=rows.reduce((s,r)=>s+r.valor,0);
+  bancoCfg._saldoCapturado=null; // não há saldo absoluto no CSV
+  bancoCfg._saldoPeriodo=saldoPeriodo;
+  return rows;
+}
+
+// Nubank CARTÃO DE CRÉDITO: date,title,amount (gastos sempre positivos)
+function impParseNubankCartao(csvText, bancoCfg){
+  const lines=csvText.trim().split('\n').filter(l=>l.trim());
+  const inicio=lines[0].toLowerCase().includes('date')||lines[0].toLowerCase().includes('data')?1:0;
+  const rows=[];
+  for(let i=inicio;i<lines.length;i++){
+    const cols=impParseCSVLine(lines[i]);
+    if(cols.length<3) continue;
+    const data=cols[0].trim(),titulo=cols[1].trim(),valor=parseFloat(cols[2].trim().replace(',','.'));
+    if(!data||!titulo||isNaN(valor)) continue;
+    if(impDeveIgnorar(titulo,valor)) continue;
+    const {titulo:tLimpo,atual,total}=impDetectarParcela(titulo);
+    const cls=impClassificar(titulo);
+    const mes=impMesFatura(data.includes('/')?data.split('/').reverse().join('-'):data, bancoCfg.fech);
+    const d=new Date((data.includes('/')?data.split('/').reverse().join('-'):data)+'T12:00:00');
+    rows.push({
+      data:d.toLocaleDateString('pt-BR'),desc:tLimpo,
+      valor:-Math.abs(valor),tipo:'Despesa',pilar:cls.pilar,cat:cls.cat,
+      meio:bancoCfg.meio,banco:bancoCfg.banco,
+      mes,obs:atual?`Parcela ${atual}/${total}`:'',
+    });
+  }
+  return rows;
+}
+
+// Helper: parse CSV respeitando aspas
+function impParseCSVLine(line){
+  const cols=[];let quoted=false,val='';
+  for(const c of line){
+    if(c==='"'){quoted=!quoted;}
+    else if(c===','&&!quoted){cols.push(val.trim());val='';}
+    else val+=c;
+  }
+  cols.push(val.trim());
+  return cols;
+}
+
+// ── PARSER BRADESCO PDF ──────────────────────────────────────
+// Formato: Data | Histórico | Docto. | Crédito (R$) | Débito (R$) | Saldo (R$)
+async function impParseBradescoOuItauPDF(file, bancoCfg){
+  initPdfJs();
+  const buf=await file.arrayBuffer();
+  const pdf=await window.pdfjsLib.getDocument({data:buf}).promise;
+  let linhas=[];
+
+  for(let p=1;p<=pdf.numPages;p++){
+    const pg=await pdf.getPage(p);
+    const tc=await pg.getTextContent();
+    // Agrupar itens por linha Y
+    const porY={};
+    for(const item of tc.items){
+      const y=Math.round(item.transform[5]);
+      if(!porY[y]) porY[y]=[];
+      porY[y].push({x:Math.round(item.transform[4]),t:item.str});
+    }
+    // Ordenar por Y desc (topo primeiro) e X asc
+    const ys=Object.keys(porY).map(Number).sort((a,b)=>b-a);
+    for(const y of ys){
+      const txt=porY[y].sort((a,b)=>a.x-b.x).map(i=>i.t).join(' ').trim();
+      if(txt) linhas.push(txt);
+    }
+  }
+
+  return impParseBradescoTexto(linhas, bancoCfg);
+}
+
+function impParseBradescoTexto(linhas, bancoCfg){
+  const rows=[];
+  let saldoFinal=null;
+
+  // Regex para linha de transação do Bradesco:
+  // DD/MM/YYYY HISTORICO [DOCTO] CREDITO DEBITO SALDO
+  // Ou: DD/MM/YYYY HISTORICO CREDITO DEBITO SALDO (sem docto)
+  const reData=/^(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+(\d+)?\s*([\d.,]+|)\s+([\d.,]+|)\s+([\d.,]+)\s*$/;
+  const reSimples=/^(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)\s*$/;
+
+  const parseVal=(s)=>{
+    if(!s||!s.trim()) return null;
+    return parseFloat(s.replace(/\./g,'').replace(',','.'));
+  };
+
+  const ignorar=['cod. lanc. 0','extrato inexistente','total'];
+
+  for(const linha of linhas){
+    const tl=linha.toLowerCase();
+    if(ignorar.some(ig=>tl.startsWith(ig))) continue;
+
+    let data=null,desc=null,credito=null,debito=null,saldo=null;
+
+    // Tentar match com docto
+    let m=linha.match(reData);
+    if(m){
+      data=m[1]; desc=m[2].trim();
+      credito=parseVal(m[4]);
+      debito=parseVal(m[5]);
+      saldo=parseVal(m[6]);
+    } else {
+      // Tentar sem docto
+      m=linha.match(reSimples);
+      if(m){
+        data=m[1]; desc=m[2].trim();
+        credito=parseVal(m[3]);
+        debito=parseVal(m[4]);
+        saldo=parseVal(m[5]);
+      }
+    }
+
+    if(!data||!desc) continue;
+    if((!credito||credito===0)&&(!debito||debito===0)) continue;
+
+    // Saldo da linha — guardar o último
+    if(saldo!==null) saldoFinal=saldo;
+
+    const isReceita=(credito&&credito>0&&(!debito||debito===0));
+    const valor=isReceita?(credito||0):-(debito||0);
+    if(valor===0) continue;
+
+    const parts=data.split('/');
+    const dataISO=`${parts[2]}-${parts[1]}-${parts[0]}`;
+    const cls=impClassificar(desc);
+
+    rows.push({
+      data,desc,
+      valor,
+      tipo:isReceita?'Receita':'Despesa',
+      pilar:isReceita?'Receita':cls.pilar,
+      cat:isReceita?'Salário/Receita':cls.cat,
+      meio:bancoCfg.meio,
+      banco:bancoCfg.banco,
+      mes:impMesDireto(dataISO),
+      obs:'Importado Bradesco PDF',
+    });
+  }
+
+  // Saldo explícito capturado da última linha
+  if(saldoFinal!==null) bancoCfg._saldoCapturado=saldoFinal;
+  return rows;
 }
 
 // ── PARSER ITAÚ PDF ──────────────────────────────────────────
@@ -3501,10 +3758,14 @@ async function impProcessarArquivos(lista){
       text=await file.text();
     }
     let rows=[];
-    if(bancoCfg.tipo==='nubank'){
+    if(bancoCfg.tipo==='nubank_auto'){
+      rows=impParseNubankAuto(text,bancoCfg);
+    }
+    else if(bancoCfg.tipo==='nubank'){
+      // legado: cartão de crédito sem auto-detecção
       const v=impValidarConteudo(text,bancoCfg);
       if(!v.ok){impShowProgress(false,'',0);alert('⚠️ '+v.msg);return;}
-      rows=impParseNubank(text,bancoCfg);
+      rows=impParseNubankCartao(text,bancoCfg);
     }
     else if(bancoCfg.tipo==='bb'){
       const v=impValidarConteudo(text,bancoCfg);
@@ -3512,7 +3773,8 @@ async function impProcessarArquivos(lista){
       rows=impParseBB(text,bancoCfg);
     }
     else if(bancoCfg.tipo==='itau_pdf') rows=await impParseItauPDF(file,bancoCfg);
-    window._impUltimoBancoCfg=bancoCfg; // preservar saldo capturado
+    else if(bancoCfg.tipo==='bradesco_pdf') rows=await impParseBradescoOuItauPDF(file,bancoCfg);
+    window._impUltimoBancoCfg=bancoCfg;
     _impDados.push(...rows);
   }
 
@@ -3573,14 +3835,38 @@ function impMostrarPreview(){
   const meses=[...new Set(_impDados.map(r=>r.mes))];
   document.getElementById('impPeriodo').textContent=meses.join(', ');
   
-  // Saldo capturado do extrato (Itaú PDF)
-  const saldoCapt=_impDados.find(r=>r._saldoCapturado)?.noop; // não existe, pegar do bancoCfg
-  // Buscar no objeto global _impBancoCfgs se disponível
+  // Saldo capturado do extrato ou campo manual
+  const cfg=window._impUltimoBancoCfg;
   let saldoInfo='';
-  if(window._impUltimoBancoCfg&&window._impUltimoBancoCfg._saldoCapturado!=null){
-    saldoInfo=`<div style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:var(--gd);border-radius:6px;font-size:12px;margin-top:6px">
-      <span style="color:var(--gr);font-weight:700">💰 Saldo extrato: ${fmt(window._impUltimoBancoCfg._saldoCapturado)}</span>
-    </div>`;
+  if(cfg){
+    const saldoCap=cfg._saldoCapturado;
+    const saldoPer=cfg._saldoPeriodo;
+    if(saldoCap!=null){
+      // Saldo real capturado do PDF (Itaú, Bradesco)
+      saldoInfo=`
+        <div style="margin-top:10px;padding:10px 12px;background:var(--gd);border-radius:var(--rs);border:1px solid var(--gr)">
+          <div style="font-size:11px;font-weight:700;color:var(--gr);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">✅ Saldo capturado do extrato</div>
+          <div style="font-size:16px;font-weight:700;font-family:var(--mono);color:var(--gr)">${fmt(saldoCap)}</div>
+          <div style="font-size:11px;color:var(--t3);margin-top:2px">Será salvo como saldo atual do ${cfg.banco}</div>
+        </div>`;
+      cfg._saldoManual=saldoCap;
+    } else {
+      // Sem saldo automático — campo manual
+      const labelExtra=saldoPer!=null?` (variação no período: ${saldoPer>0?'+':''}${fmt(saldoPer)})`:'';
+      saldoInfo=`
+        <div style="margin-top:10px;padding:10px 12px;background:var(--ci);border-radius:var(--rs);border:1px solid var(--b)">
+          <div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">
+            Saldo atual em conta${labelExtra}
+          </div>
+          <div style="font-size:11px;color:var(--t3);margin-bottom:6px">
+            O extrato do ${cfg.banco} não contém saldo absoluto. Informe o saldo atual para acompanhamento correto.
+          </div>
+          <input id="impSaldoManual" type="number" step="0.01" placeholder="Ex: 1250,00"
+            style="width:100%;padding:8px 10px;background:var(--card);border:1.5px solid var(--b);border-radius:var(--rx);color:var(--t);font-size:15px;font-family:var(--mono);outline:none"
+            oninput="window._impUltimoBancoCfg._saldoManual=parseFloat(this.value.replace(',','.'))||null"/>
+          <div style="font-size:10px;color:var(--t3);margin-top:4px">Opcional — pode preencher depois</div>
+        </div>`;
+    }
   }
   document.getElementById('impBancoTag').innerHTML=(bancos.join(' + '))+(saldoInfo?'<br>'+saldoInfo:'');
   
@@ -3613,6 +3899,20 @@ function impMostrarPreview(){
 async function impConfirmar(){
   const paraImportar=_impDupAction==='skip'?_impDados.filter(r=>!r.isDup):_impDados;
   if(!paraImportar.length){impReset();return;}
+
+  // Salvar saldo no localStorage (histórico de saldos por banco)
+  const cfg=window._impUltimoBancoCfg;
+  if(cfg&&cfg._saldoManual!=null){
+    try{
+      const hist=JSON.parse(ls('fin_saldos_hist')||'{}');
+      const chave=cfg.banco.toLowerCase().replace(/\s+/g,'_');
+      if(!hist[chave]) hist[chave]=[];
+      hist[chave].unshift({data:new Date().toISOString().split('T')[0],saldo:cfg._saldoManual,banco:cfg.banco,fonte:'extrato'});
+      hist[chave]=hist[chave].slice(0,12); // manter últimos 12 registros
+      lss('fin_saldos_hist',JSON.stringify(hist));
+      console.log('[saldo] Salvo:',cfg.banco,'→',cfg._saldoManual);
+    }catch(e){console.warn('[saldo] Erro ao salvar:',e);}
+  }
   
   document.getElementById('impConfirmBtn').textContent='Enviando...';
   document.getElementById('impConfirmBtn').disabled=true;
@@ -3789,27 +4089,31 @@ function renderEvolChart(){
     const onClickMes=(evt,els)=>{if(!els.length)return;const idx=els[0].index;const h=d.hist[idx];if(!h)return;const parts=h.mes.split('/');if(parts.length===2){const mi=MC.indexOf(parts[0]);const ai=parseInt(parts[1]);if(mi>=0&&ai){ST.mesIdx=mi;ST.ano=ai;atualizarLbl();carregarDados();}}};
     // Destacar mês atual com opacidade plena, demais em 55%
     const mesAtualLabel=MC[ST.mesIdx]+'/'+ST.ano;
-    const bgReceita=d.hist.map(h=>h.mes===mesAtualLabel?gc('gr')+'EE':gc('gr')+'28');
-    const bgDespesa=d.hist.map(h=>h.mes===mesAtualLabel?gc('re')+'EE':gc('re')+'28');
-    const bdReceita=d.hist.map(h=>h.mes===mesAtualLabel?gc('gr'):gc('gr')+'55');
-    const bdDespesa=d.hist.map(h=>h.mes===mesAtualLabel?gc('re'):gc('re')+'55');
+    // Sem border, só fill — mês atual sólido, passados muito transparentes
+    const bgReceita=d.hist.map(h=>h.mes===mesAtualLabel?gc('gr')+'BB':gc('gr')+'20');
+    const bgDespesa=d.hist.map(h=>h.mes===mesAtualLabel?gc('re')+'BB':gc('re')+'20');
     charts['cL']=new Chart(ctx,{type:'bar',data:{labels:d.hist.map(h=>h.mes),datasets:[
-      {label:'Receita',data:d.hist.map(h=>h.receita),backgroundColor:bgReceita,borderColor:bdReceita,borderWidth:1.5,borderRadius:8,borderSkipped:false,barPercentage:.38,categoryPercentage:.9,datalabels:{display:false}},
-      {label:'Despesa',data:d.hist.map(h=>h.despesa),backgroundColor:bgDespesa,borderColor:bdDespesa,borderWidth:1.5,borderRadius:8,borderSkipped:false,barPercentage:.38,categoryPercentage:.9,datalabels:{display:false}},
+      {label:'Receita',data:d.hist.map(h=>h.receita),backgroundColor:bgReceita,borderWidth:0,borderRadius:10,borderSkipped:false,barPercentage:.35,categoryPercentage:.85,datalabels:{display:false}},
+      {label:'Despesa',data:d.hist.map(h=>h.despesa),backgroundColor:bgDespesa,borderWidth:0,borderRadius:10,borderSkipped:false,barPercentage:.35,categoryPercentage:.85,datalabels:{display:false}},
     ]},options:{responsive:true,maintainAspectRatio:false,onClick:onClickMes,
       onHover:(e)=>{e.native.target.style.cursor=e.chart.getElementsAtEventForMode(e.native,'nearest',{intersect:true},false).length?'pointer':'default';},
       plugins:{
         legend:{display:false},
-        tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmt(c.raw)}`},backgroundColor:'rgba(0,0,0,.8)',titleFont:{size:11},bodyFont:{size:12},padding:10,cornerRadius:8},
+        tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmt(c.raw)}`},
+          backgroundColor:gc('card'),borderColor:gc('b'),borderWidth:1,
+          titleColor:gc('t'),bodyColor:gc('t2'),padding:10,cornerRadius:8,displayColors:true,boxWidth:8,boxHeight:8,boxPadding:4},
         datalabels:{display:false}
       },
       scales:{
-        x:{ticks:{color:(ctx2)=>d.hist[ctx2.index]?.mes===mesAtualLabel?gc('t'):gc('t3'),font:(ctx2)=>({size:11,weight:d.hist[ctx2.index]?.mes===mesAtualLabel?'700':'400'})},grid:{display:false},border:{display:false}},
-        y:{min:0,max:maxV,ticks:{color:gc('t3'),font:{size:10},callback:v=>'R$'+(v/1000).toFixed(0)+'k',maxTicksLimit:5},grid:{color:gc('b')+'70',lineWidth:.8},border:{display:false}}
+        x:{ticks:{color:(c)=>d.hist[c.index]?.mes===mesAtualLabel?gc('t'):gc('t3'),
+              font:(c)=>({size:11,weight:d.hist[c.index]?.mes===mesAtualLabel?'600':'400'})},
+          grid:{display:false},border:{display:false}},
+        y:{min:0,max:maxV,
+          ticks:{color:gc('t3'),font:{size:10},callback:v=>v===0?'':('R$'+(v/1000).toFixed(0)+'k'),maxTicksLimit:4},
+          grid:{color:gc('b')+'35',lineWidth:.5},border:{display:false}}
       },
-      layout:{padding:{top:4}}
+      layout:{padding:{top:10,bottom:0}}
     }});
-    // Legenda inline sob o chart
     const legEl=document.getElementById('cL-legend');
     if(legEl)legEl.innerHTML=`<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:3px;display:inline-block;background:${gc('gr')}"></span><span style="font-size:11px;color:var(--t2)">Receita</span></span><span style="display:inline-flex;align-items:center;gap:4px;margin-left:12px"><span style="width:10px;height:10px;border-radius:3px;display:inline-block;background:${gc('re')}"></span><span style="font-size:11px;color:var(--t2)">Despesa</span></span>`;
   }
