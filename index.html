@@ -946,6 +946,29 @@ tbody tr:hover td{background:var(--ci)}
       </div>
       <div class="mg2"><div class="mf"><label>Data</label><input type="date" id="mfd"/></div><div class="mf"><label>Valor</label><input type="number" id="mfv" step="0.01" min="0" placeholder="0,00"/></div></div>
       <div class="mf"><label>Descrição</label><input type="text" id="mfde" placeholder="Ex: iFood, Supermercado..."/></div>
+      <!-- Status de confirmação — visível só para Receita -->
+      <div class="mf" id="mfStatusWrap" style="display:none">
+        <label style="font-weight:700">Status da receita</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+          <label id="lblConfirmado" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--gr);border-radius:var(--rs);cursor:pointer;background:var(--gd);transition:all .15s">
+            <input type="radio" name="mfStatus" id="mfStatusConf" value="Confirmado" checked onchange="atualizarStatusReceita()" style="accent-color:var(--gr)"/>
+            <div>
+              <div style="font-size:12px;font-weight:700;color:var(--gr)">✅ Confirmado</div>
+              <div style="font-size:10px;color:var(--t3)">Já entrou na conta</div>
+            </div>
+          </label>
+          <label id="lblPrevisto" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--b);border-radius:var(--rs);cursor:pointer;background:var(--ci);transition:all .15s">
+            <input type="radio" name="mfStatus" id="mfStatusPrev" value="Previsto" onchange="atualizarStatusReceita()" style="accent-color:var(--am)"/>
+            <div>
+              <div style="font-size:12px;font-weight:700;color:var(--am)">🔮 Previsto</div>
+              <div style="font-size:10px;color:var(--t3)">Projeção — ainda vai entrar</div>
+            </div>
+          </label>
+        </div>
+        <div id="mfStatusDica" style="font-size:11px;color:var(--t3);margin-top:6px;padding:6px 10px;background:var(--ci);border-radius:var(--rx)">
+          ✅ <strong>Confirmado:</strong> entra no saldo real do mês. Se o extrato também registrar essa entrada, o lançamento manual será ignorado automaticamente.
+        </div>
+      </div>
       <div class="mf"><label>Pilar</label><select id="mfp" onchange="uC()"></select></div>
       <div class="mf"><label>Categoria</label><select id="mfc"></select></div>
       <div class="mg2"><div class="mf"><label>Pagamento</label><select id="mfm"></select></div><div class="mf"><label>Usuário</label><select id="mfu"></select></div></div>
@@ -1018,7 +1041,7 @@ function bankLogo(idOrName,size=20){
 const BANKS=[{id:'nubank',nm:'Nubank',em:'nubank',fc:28,vc:10,cr:'Crédito Nubank'},{id:'itau',nm:'Itaú',em:'itau',fc:20,vc:27,cr:'Crédito Itaú'},{id:'bradesco',nm:'Bradesco',em:'bradesco',fc:15,vc:22,cr:'Crédito Bradesco'},{id:'inter',nm:'Inter',em:'inter',fc:7,vc:14,cr:'Crédito Inter'},{id:'bb',nm:'Banco do Brasil',em:'bb',fc:5,vc:12,cr:'Crédito BB'},{id:'santander',nm:'Santander',em:'santander',fc:10,vc:17,cr:'Crédito Santander'},{id:'xp',nm:'XP',em:'xp',fc:15,vc:22,cr:'Crédito XP'},{id:'c6',nm:'C6 Bank',em:'c6',fc:3,vc:10,cr:'Crédito C6'},{id:'outro',nm:'Outro',em:'outro',fc:15,vc:22,cr:'Débito'}];
 
 let CFG={sheetId:ls('fin_sheetId')||'',scriptUrl:ls('fin_scriptUrl')||'',secret:ls('fin_secret')||'',userName:ls('fin_userName')||'Você'};
-let ST={mesIdx:new Date().getMonth(),ano:new Date().getFullYear(),dados:null,sbCol:ls('fin_sb')==='1',viewMode:'mes'};
+let ST={mesIdx:new Date().getMonth(),ano:new Date().getFullYear(),dados:null,sbCol:ls('fin_sb')==='1',viewMode:'mes',projetado:false};
 let OB={step:0,renda:{tipo:'fixa',valor:ls('fin_renda')||'',dia:'1'},bancos:[],despesas:[],investimentos:[],metas:[]};
 let tipoM='gasto',charts={};
 
@@ -1892,9 +1915,14 @@ function setT(t){
   document.getElementById('mt-'+t)?.classList.add('active');
   document.getElementById('mfg').style.display=t==='fixo'?'none':'block';
   document.getElementById('mff').style.display=t==='fixo'?'block':'none';
+  // Mostrar campo Status só para Receita
+  const statusWrap=document.getElementById('mfStatusWrap');
+  if(statusWrap) statusWrap.style.display=t==='receita'?'block':'none';
   if(t==='receita'){
     document.getElementById('mfp').value='Receita';uC();
-    // Mostrar botão rápido de salário
+    // Default: Confirmado para manuais
+    const conf=document.getElementById('mfStatusConf');
+    if(conf){conf.checked=true;atualizarStatusReceita();}
     const renda=parseFloat(ls('fin_renda')||0);
     const sqb=document.getElementById('salary-quick-btn');
     const sqv=document.getElementById('salary-quick-val');
@@ -1903,6 +1931,22 @@ function setT(t){
     const sqb=document.getElementById('salary-quick-btn');
     if(sqb)sqb.style.display='none';
   }
+}
+
+function atualizarStatusReceita(){
+  const isPrevisto=document.getElementById('mfStatusPrev')?.checked;
+  const dica=document.getElementById('mfStatusDica');
+  const lblConf=document.getElementById('lblConfirmado');
+  const lblPrev=document.getElementById('lblPrevisto');
+  if(dica){
+    dica.innerHTML=isPrevisto
+      ?'🔮 <strong>Previsto:</strong> aparece na projeção do mês, mas <u>não entra no saldo real</u> até ser confirmado pelo extrato.'
+      :'✅ <strong>Confirmado:</strong> entra no saldo real do mês. Se o extrato também registrar essa entrada, o manual será ignorado automaticamente.';
+  }
+  if(lblConf) lblConf.style.borderColor=isPrevisto?'var(--b)':'var(--gr)';
+  if(lblConf) lblConf.style.background=isPrevisto?'var(--ci)':'var(--gd)';
+  if(lblPrev) lblPrev.style.borderColor=isPrevisto?'var(--am)':'var(--b)';
+  if(lblPrev) lblPrev.style.background=isPrevisto?'rgba(245,158,11,.08)':'var(--ci)';
 }
 function preencherSalario(){
   const renda=parseFloat(ls('fin_renda')||0);
@@ -1935,7 +1979,13 @@ async function salvarG(){
   const pA=parseInt(document.getElementById('mfpa').value)||1,pT=parseInt(document.getElementById('mfpt').value)||1;
   const obs=document.getElementById('mfo').value.trim();
   if(!data||!valor||!desc){alert('Preencha data, valor e descrição.');return;}
-  const obsFinal=temParc?`Parcela ${pA}/${pT}${obs?' — '+obs:''}`:obs;
+  // Status de receita: Confirmado ou Previsto
+  const statusReceita=tipo==='Receita'?
+    (document.getElementById('mfStatusPrev')?.checked?'Previsto':'Confirmado')
+    :'';
+  const statusTag=statusReceita?`[${statusReceita}]`:'';
+  const obsFinal=temParc?`Parcela ${pA}/${pT}${statusTag?` ${statusTag}`:''}${obs?' — '+obs:''}`:
+    (statusTag?(obs?`${statusTag} — ${obs}`:statusTag):obs);
   const vF=tipo==='Receita'?Math.abs(valor):-Math.abs(valor);
   await chamarScript('salvarTransacaoDoFormulario',{data,valor:vF,descricao:desc,tipo,pilar,categoria:cat,meio,usuario,obs:obsFinal});
   mostrarOk('mfok');['mfde','mfv','mfo'].forEach(id=>document.getElementById(id).value='');
@@ -2059,7 +2109,67 @@ function filtraMes(rows,ms){return rows.filter(r=>{const j=normJ(r[9]);if(j&&j.i
 function processarDados(tr,ve,me,ins,es,gf,mesStr){
   const lt=tr.slice(1).filter(r=>r[0]&&r[2]);
   const tm=filtraMes(lt,mesStr);
-  const rec=tm.filter(r=>r[3]==='Receita').reduce((s,r)=>s+num(r[2]),0);
+
+  // ── Separar receitas: Real vs Previsto ───────────────────────
+  // Status fica na coluna Observação (col 10) como [Confirmado] ou [Previsto]
+  // Receitas do extrato (sem [Previsto] na obs) = sempre Real
+  // Receitas manuais com [Previsto] = só aparecem no modo Projetado
+  const todasReceitas=tm.filter(r=>r[3]==='Receita');
+  const receitasExtrato=todasReceitas.filter(r=>{
+    const obs=(r[10]||'').toString().toLowerCase();
+    // Do extrato = não tem tag de status manual ou é Confirmado
+    return !obs.includes('[previsto]');
+  });
+  const receitasPrevistas=todasReceitas.filter(r=>{
+    const obs=(r[10]||'').toString().toLowerCase();
+    return obs.includes('[previsto]');
+  });
+
+  // ── Deduplicação: remover manuais Confirmados cobertos pelo extrato ──
+  // Se uma receita manual [Confirmado] tem valor similar a uma do extrato na mesma semana → suprimir
+  const receitasManuaisConf=receitasExtrato.filter(r=>{
+    const obs=(r[10]||'').toString().toLowerCase();
+    return obs.includes('[confirmado]'); // marcado manualmente
+  });
+  const receitasExtratoPuro=receitasExtrato.filter(r=>{
+    const obs=(r[10]||'').toString().toLowerCase();
+    return !obs.includes('[confirmado]'); // veio do extrato diretamente
+  });
+
+  // Para cada manual Confirmado, verificar se existe entrada do extrato com ±10% e ±7 dias
+  const manuaisDeduplicados=new Set();
+  receitasManuaisConf.forEach((manual,idx)=>{
+    const valorM=Math.abs(num(manual[2]));
+    const dataM=pD(manual[0]);
+    const temNoExtrato=receitasExtratoPuro.some(ext=>{
+      const valorE=Math.abs(num(ext[2]));
+      const dataE=pD(ext[0]);
+      if(!dataM||!dataE) return false;
+      const diffDias=Math.abs((dataM-dataE)/864e5);
+      const diffValor=Math.abs(valorE-valorM)/Math.max(valorM,1);
+      return diffDias<=7&&diffValor<=0.10;
+    });
+    if(temNoExtrato) manuaisDeduplicados.add(idx);
+  });
+
+  const receitasManuaisValidas=receitasManuaisConf.filter((_,idx)=>!manuaisDeduplicados.has(idx));
+  const receitasDuplicadasCount=manuaisDeduplicados.size;
+
+  // ── Calcular rec real e projetado ───────────────────────────
+  const recReal=[...receitasExtratoPuro,...receitasManuaisValidas].reduce((s,r)=>s+num(r[2]),0);
+  const recProjetado=recReal+receitasPrevistas.reduce((s,r)=>s+num(r[2]),0);
+
+  // Completar com salário do perfil se mês atual e ainda não entrou
+  const isMesAtualP=ST.mesIdx===new Date().getMonth()&&ST.ano===new Date().getFullYear();
+  const rendaPerfil=parseFloat(ls('fin_renda')||0)||recReal;
+  let recProjetadoFinal=recProjetado;
+  if(isMesAtualP&&receitasPrevistas.length===0&&recReal<rendaPerfil*0.5){
+    // Salário ainda não entrou e não há previsto manual → projetar com renda do perfil
+    recProjetadoFinal=Math.max(recProjetado,rendaPerfil);
+  }
+
+  // Usar rec conforme modo
+  const rec=ST.projetado?recProjetadoFinal:recReal;
   const desp=tm.filter(r=>r[3]==='Despesa');
   const td=desp.reduce((s,r)=>s+Math.abs(num(r[2])),0);
   const gpp={};Object.keys(PM).forEach(p=>gpp[p]=0);
@@ -2071,8 +2181,7 @@ function processarDados(tr,ve,me,ins,es,gf,mesStr){
   const hist=[];
   for(let m=5;m>=0;m--){const mi=(ST.mesIdx-m+12)%12,ai=ST.mesIdx-m<0?ST.ano-1:ST.ano;const ms=MC[mi]+'/'+ai;const _t=filtraMes(lt,ms);const r2=_t.filter(r=>r[3]==='Receita').reduce((s,r)=>s+num(r[2]),0);const d2=_t.filter(r=>r[3]==='Despesa').reduce((s,r)=>s+Math.abs(num(r[2])),0);hist.push({mes:MC[mi],receita:r2,despesa:d2,saldo:r2-d2});}
 
-  // Renda do perfil
-  const rendaPerfil=parseFloat(ls('fin_renda')||0)||rec;
+  // Renda do perfil (já definida acima no bloco de cálculo)
   const despesasOB=JSON.parse(ls('fin_despesas')||'[]');
 
   // Vencimentos — combinar aba Vencimentos + Gastos Fixos + despesas do onboarding
@@ -2236,7 +2345,7 @@ function processarDados(tr,ve,me,ins,es,gf,mesStr){
     return{mes:ms,receita:r2,despesa:d2,saldo:r2-d2};
   });
 
-  return{rec,td,saldo:rec-td,saldoAV:rec-td-tp,gpp,topC,hist,histAll,histPilares,vp,tp,tv,mArr,iArr,eArr,naoMap,proj,ultTr,rendaPerfil,invTotal,despFixasMes,saldoTotal};
+  return{rec,td,saldo:rec-td,saldoAV:rec-td-tp,gpp,topC,hist,histAll,histPilares,vp,tp,tv,mArr,iArr,eArr,naoMap,proj,ultTr,rendaPerfil,invTotal,despFixasMes,saldoTotal,recReal,recProjetadoFinal,receitasDuplicadasCount,receitasPrevistas:receitasPrevistas.length};
 }
 
 function num(v){if(typeof v==='number')return v;return parseFloat((v||'0').toString().replace(/[^0-9.,-]/g,'').replace(',','.'))||0;}
@@ -2257,6 +2366,10 @@ function renderAll(){rVisao();rPilares();rVenc();rIns();rMetas();rEstab();}
 
 function gerarInsightPills(d){
   const pills=[];
+  // Aviso modo projetado
+  if(ST.projetado) pills.push({cls:'am',icon:'🔮',txt:`Modo projetado — valores incluem receitas previstas`});
+  // Aviso deduplicação
+  if(d.receitasDuplicadasCount>0) pills.push({cls:'am',icon:'⚠️',txt:`${d.receitasDuplicadasCount} receita(s) manual(is) ignorada(s) — já no extrato`});
   const pct=d.rec>0?(d.td/d.rec)*100:0;
   // Saldo
   if(d.saldo<0) pills.push({cls:'re',icon:'🔴',txt:`Saldo negativo: ${fmt(Math.abs(d.saldo))}`});
@@ -2291,23 +2404,37 @@ function rVisao(){
 
   let html=`
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
-    <div class="view-toggle">
-      <button class="vt-btn active" id="vtMes" onclick="setView('mes')">📅 Este mês</button>
-      <button class="vt-btn" id="vtGeral" onclick="setView('geral')">🌐 Visão geral</button>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <div class="view-toggle">
+        <button class="vt-btn active" id="vtMes" onclick="setView('mes')">📅 Este mês</button>
+        <button class="vt-btn" id="vtGeral" onclick="setView('geral')">🌐 Visão geral</button>
+      </div>
+      <div class="view-toggle" style="margin-left:4px">
+        <button class="vt-btn ${!ST.projetado?'active':''}" id="vtReal" onclick="setModoProjecao(false)" style="${!ST.projetado?'':'color:var(--t3)'}">✅ Real</button>
+        <button class="vt-btn ${ST.projetado?'active':''}${ST.projetado?' style=background:rgba(245,158,11,.12);color:var(--am);border-color:var(--am)':''}" id="vtProjetado" onclick="setModoProjecao(true)">🔮 Projetado</button>
+      </div>
     </div>
-    <div style="font-size:12px;color:var(--t3);font-weight:500">${MESES[ST.mesIdx]} ${ST.ano}</div>
+    <div style="font-size:12px;color:var(--t3);font-weight:500">${MESES[ST.mesIdx]} ${ST.ano}${ST.projetado?' · modo projeção':''}</div>
   </div>
   ${d.naoMap.length>0?`<div class="alert-bar" onclick="nav('estab',document.querySelector('[onclick*=estab]'))">⚠️ <strong>${d.naoMap.length} estabelecimento(s)</strong> aguardando mapeamento</div>`:''}
   ${pills.length>0?`<div class="ip-row">${pills.map(p=>`<span class="ip ${p.cls}"><span class="ip-icon">${p.icon}</span>${p.txt}</span>`).join('')}</div>`:''}
   <div class="kpi-row">
     ${rSaldoContas()}
     <div class="kpi k-gr">
-      <div class="kpi-top"><div class="kpi-ic gr">💰</div><span class="kpi-badge ${d.rec>0?'dn':'nu'}">${d.rec>0?'✓ recebido':'aguardando'}</span></div>
+      <div class="kpi-top">
+        <div class="kpi-ic gr">💰</div>
+        <span class="kpi-badge ${d.rec>0?'dn':'nu'}">${ST.projetado?'🔮 projetado':d.rec>0?'✓ recebido':'aguardando'}</span>
+      </div>
       <div class="kpi-val gr">${fmt(d.rec)}</div>
-      <div class="kpi-lbl">Receita — ${MESES[ST.mesIdx]}</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+        <div class="kpi-lbl" style="margin-bottom:0">Receita — ${MESES[ST.mesIdx]}</div>
+        ${ST.projetado&&d.receitasPrevistas>0?`<span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;background:rgba(245,158,11,.12);color:var(--am)">+${d.receitasPrevistas} prevista(s)</span>`:''}
+      </div>
       <div class="kpi-detail">
+        <div class="kpi-detail-row"><span>Confirmado (extrato)</span><span class="kpi-detail-val" style="color:var(--gr)">${fmt(d.recReal||d.rec)}</span></div>
+        ${d.recProjetadoFinal&&d.recProjetadoFinal>d.recReal?`<div class="kpi-detail-row"><span>Previsto (projeção)</span><span class="kpi-detail-val" style="color:var(--am)">${fmt(d.recProjetadoFinal-d.recReal)}</span></div>`:''}
+        ${d.receitasDuplicadasCount>0?`<div class="kpi-detail-row"><span style="color:var(--am)">⚠️ Manuais ignorados</span><span class="kpi-detail-val" style="color:var(--am)">${d.receitasDuplicadasCount} (coberto pelo extrato)</span></div>`:''}
         <div class="kpi-detail-row"><span>Renda base perfil</span><span class="kpi-detail-val" style="color:var(--gr)">${fmt(d.rendaPerfil)}</span></div>
-        <div class="kpi-detail-row"><span>Variação</span><span class="kpi-detail-val" style="color:${d.rec>d.rendaPerfil?'var(--gr)':d.rec<d.rendaPerfil?'var(--am)':'var(--t3)'}">${d.rec>d.rendaPerfil?'▲':d.rec<d.rendaPerfil?'▼':'='} ${fmt(Math.abs(d.rec-d.rendaPerfil))}</span></div>
         <div class="kpi-detail-row" style="border-top:1px solid var(--b);margin-top:4px;padding-top:4px">
           <span>Saldo total acum.</span>
           <span class="kpi-detail-val" style="color:${d.saldoTotal>=0?'var(--gr)':'var(--re)'}">${fmt(d.saldoTotal)}</span>
@@ -2530,6 +2657,11 @@ function setView(v){
   ST.viewMode=v;
   document.getElementById('vtMes')?.classList.toggle('active',v==='mes');
   document.getElementById('vtGeral')?.classList.toggle('active',v==='geral');
+  rVisao();
+}
+
+function setModoProjecao(projetado){
+  ST.projetado=projetado;
   rVisao();
 }
 
@@ -3196,6 +3328,15 @@ function impParseNubankConta(csvText, bancoCfg){
     const mesStr=impMesDireto(dataISO);
 
     const cls=impClassificar(desc);
+
+    // Detectar meio de pagamento pela descrição
+    const dl=desc.toLowerCase();
+    let meio=bancoCfg.banco+' Conta';
+    if(dl.includes('pix')) meio='PIX';
+    else if(dl.includes('compra no débito')||dl.includes('compra no debito')) meio='Débito '+bancoCfg.banco;
+    else if(dl.includes('boleto')) meio='Boleto';
+    else if(isReceita&&dl.includes('transfer')) meio='PIX';
+
     rows.push({
       data:dataFmt,
       desc,
@@ -3203,7 +3344,7 @@ function impParseNubankConta(csvText, bancoCfg){
       tipo:isReceita?'Receita':'Despesa',
       pilar:isReceita?'Receita':cls.pilar,
       cat:isReceita?'Salário/Receita':cls.cat,
-      meio:bancoCfg.meio,
+      meio,
       banco:bancoCfg.banco,
       mes:mesStr,
       obs:'Importado Nubank Conta',
