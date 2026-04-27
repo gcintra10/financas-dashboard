@@ -189,7 +189,7 @@ input,select,textarea{font-family:var(--font)}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
 /* ══ KPI CARDS ═══════════════════════════════════════════ */
-.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:20px}
+.kpi-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:20px}
 .kpi{background:var(--card);border-radius:var(--r);padding:20px;border:1px solid var(--b);box-shadow:var(--sh);position:relative;overflow:hidden;transition:box-shadow var(--dur),transform var(--dur)}
 .kpi:hover{box-shadow:var(--shm);transform:translateY(-2px)}
 .kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--r) var(--r) 0 0}
@@ -520,8 +520,7 @@ tbody tr:hover td{background:var(--ci)}
   .mw{margin-left:0!important}
   .topbar{padding:12px 16px}
   .content{padding:16px}
-  .kpi-row{grid-template-columns:1fr 1fr;gap:10px}
-  .kpi{padding:14px}.kpi-val{font-size:18px}
+  .kpi-row{grid-template-columns:1fr 1fr;gap:10px}  .kpi{padding:14px}.kpi-val{font-size:18px}
   .g2,.g3,.g64,.g46{grid-template-columns:1fr}
   .ins-g{grid-template-columns:1fr}
   .proj-cards{grid-template-columns:1fr}
@@ -2564,7 +2563,7 @@ function rVisao(){
           return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--b)">
             <div style="width:34px;height:34px;border-radius:10px;background:${isRec?'var(--gd)':'var(--ci)'};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${icon}</div>
             <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.desc}</div>
+              <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${t.desc}">${limparDescDisplay(t.desc)}</div>
               <div style="font-size:11px;color:var(--t3)">${t.cat||'—'} · ${d2}</div>
             </div>
             <div style="font-size:13px;font-weight:700;font-family:var(--mono);color:${isRec?'var(--gr)':'var(--re)'};white-space:nowrap">${isRec?'+':'−'}${fmt(Math.abs(t.valor))}</div>
@@ -3371,35 +3370,75 @@ function impParseNubankConta(csvText, bancoCfg){
   const lines=csvText.trim().split('\n').filter(l=>l.trim());
   const inicio=lines[0].toLowerCase().includes('data')||lines[0].toLowerCase().includes('date')?1:0;
 
-  const ignoreDesc=[
-    '51.276',        // transferência para PJ própria
-    'pagamento de fatura','pagamento fatura',
+  // CPF/CNPJ do Gabriel para detectar transferências entre contas próprias
+  // Itaú: •••.307.614-•• | CNPJ PJ: 51.276.744
+  // Agência Itaú: 3294 Conta: 33615-5
+  const CONTAS_PROPRIAS=[
+    '51.276',           // CNPJ PJ
+    '307.614',          // CPF Gabriel (parcial, mascarado)
+    'gabriel cintra de santana',
+    'pagamento de fatura',
+    'pagamento fatura',
+    'resgate de aplicação',
+    'resgate cdb',
+    'resgate rdb',
   ];
+
+  const isTransfEntreContasProprias=(desc)=>{
+    const dl=desc.toLowerCase();
+    // Transferência enviada para conta própria → ignorar sempre
+    if(dl.includes('enviada')&&CONTAS_PROPRIAS.some(p=>dl.includes(p.toLowerCase()))) return true;
+    // Transferência recebida de conta própria (Itaú → Nubank) → ignorar
+    if(dl.includes('recebida')&&CONTAS_PROPRIAS.some(p=>dl.includes(p.toLowerCase()))) return true;
+    return false;
+  };
+
+  const isIgnorar=(desc)=>[
+    'pagamento de fatura','pagamento fatura',
+    'resgate de aplicação','resgate cdb','resgate rdb',
+  ].some(ig=>desc.toLowerCase().includes(ig));
+
   const isReceitaDesc=(d)=>[
-    'transferência recebida','recebida pelo pix','crédito em conta',
-    'salário','salario','rendimento','deposito','depósito',
+    'recebida pelo pix','crédito em conta','salário','salario',
+    'rendimento','deposito','depósito','remuneração',
   ].some(r=>d.toLowerCase().includes(r));
 
-  let saldoAcum=null; // calcular saldo ao longo do extrato
-  let saldoInicial=0;
+  // Limpar descrição: remover info bancária desnecessária após o nome
+  function limparDesc(desc){
+    // Padrões: "NOME - •••.000.000-•• - BANCO..." → "NOME"
+    // "NOME - 00.000.000/0001-00 - BANCO..." → "NOME"
+    // "Transferência enviada pelo Pix - NOME ..." → "Pix - NOME"
+    let d=desc
+      .replace(/\s*-\s*•+\.[\d.•-]+\s*-\s*.+$/,'')   // remove CPF mascarado + banco
+      .replace(/\s*-\s*[\d]{2}\.[\d]{3}\.[\d]{3}\/[\d]{4}-[\d]{2}\s*-\s*.+$/,'') // remove CNPJ + banco
+      .replace(/\s*\(Transferência enviada\)$/,'')       // remove sufixo redundante
+      .replace(/\s*-\s*\d{2}\.\d{3}\.\d{3}-\d$/,'')    // remove CPF visível + banco
+      .trim();
+    // "Transferência enviada pelo Pix - NOME" → extrair só o nome
+    const m=d.match(/Transferência (?:enviada|recebida) pelo Pix - (.+)/i);
+    if(m) return (d.startsWith('Transferência enviada')?'Pix enviado → ':'Pix recebido ← ')+m[1].trim();
+    return d;
+  }
 
   for(let i=inicio;i<lines.length;i++){
-    // CSV pode ter vírgulas dentro de aspas
     const cols=impParseCSVLine(lines[i]);
     if(cols.length<4) continue;
     const dataRaw=cols[0].trim();
     const valorRaw=cols[1].trim();
-    const desc=(cols[3]||cols[2]||'').trim();
+    const descOriginal=(cols[3]||cols[2]||'').trim();
 
-    if(!dataRaw||!valorRaw||!desc) continue;
+    if(!dataRaw||!valorRaw||!descOriginal) continue;
 
     const valor=parseFloat(valorRaw.replace(',','.'));
     if(isNaN(valor)||valor===0) continue;
-    if(ignoreDesc.some(ig=>desc.toLowerCase().includes(ig))) continue;
 
-    const isReceita=valor>0||isReceitaDesc(desc);
+    // Ignorar transferências entre contas próprias e faturas
+    if(isIgnorar(descOriginal)) continue;
+    if(isTransfEntreContasProprias(descOriginal)) continue;
 
-    // Converter data DD/MM/YYYY ou YYYY-MM-DD
+    const desc=limparDesc(descOriginal);
+    const isReceita=valor>0;  // no Nubank conta: positivo = entrada, negativo = saída
+
     let dataISO=dataRaw;
     if(dataRaw.includes('/')){
       const p=dataRaw.split('/');
@@ -3407,16 +3446,13 @@ function impParseNubankConta(csvText, bancoCfg){
     }
     const dataFmt=dataISO.includes('-')?new Date(dataISO+'T12:00:00').toLocaleDateString('pt-BR'):dataRaw;
     const mesStr=impMesDireto(dataISO);
-
     const cls=impClassificar(desc);
 
-    // Detectar meio de pagamento pela descrição
-    const dl=desc.toLowerCase();
+    const dl=descOriginal.toLowerCase();
     let meio=bancoCfg.banco+' Conta';
     if(dl.includes('pix')) meio='PIX';
     else if(dl.includes('compra no débito')||dl.includes('compra no debito')) meio='Débito '+bancoCfg.banco;
     else if(dl.includes('boleto')) meio='Boleto';
-    else if(isReceita&&dl.includes('transfer')) meio='PIX';
 
     rows.push({
       data:dataFmt,
@@ -4135,7 +4171,7 @@ function impMostrarPreview(){
   // Tabela preview
   const paraImportar=_impDupAction==='skip'?novas:_impDados;
   document.getElementById('impTableBody').innerHTML=paraImportar.slice(0,30).map(r=>`<tr>
-    <td style="padding:6px 8px;font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t);border-bottom:1px solid var(--b)">${r.desc}</td>
+    <td style="padding:6px 8px;font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t);border-bottom:1px solid var(--b)" title="${r.desc}">${limparDescDisplay(r.desc)}</td>
     <td style="padding:6px 8px;font-size:11px;color:var(--t2);border-bottom:1px solid var(--b)"><span class="pill pn">${r.cat||'—'}</span></td>
     <td style="padding:6px 8px;font-size:11px;color:var(--t3);border-bottom:1px solid var(--b)">${r.mes||'—'}</td>
     <td style="padding:6px 8px;font-size:12px;font-family:var(--mono);font-weight:600;text-align:right;color:${r.tipo==='Receita'?'var(--gr)':'var(--re)'};border-bottom:1px solid var(--b)">${r.tipo==='Receita'?'+':''}${fmt(Math.abs(r.valor))}</td>
@@ -4152,17 +4188,28 @@ async function impConfirmar(){
   const paraImportar=_impDupAction==='skip'?_impDados.filter(r=>!r.isDup):_impDados;
   if(!paraImportar.length){impReset();return;}
 
-  // Salvar saldo no localStorage (histórico de saldos por banco)
+  // Salvar saldo no localStorage — só se for o primeiro registro (âncora)
   const cfg=window._impUltimoBancoCfg;
   if(cfg&&cfg._saldoManual!=null){
     try{
       const hist=JSON.parse(ls('fin_saldos_hist')||'{}');
       const chave=cfg.banco.toLowerCase().replace(/\s+/g,'_');
       if(!hist[chave]) hist[chave]=[];
-      hist[chave].unshift({data:new Date().toISOString().split('T')[0],saldo:cfg._saldoManual,banco:cfg.banco,fonte:'extrato'});
-      hist[chave]=hist[chave].slice(0,12); // manter últimos 12 registros
+      // Só gravar se não tiver registro mais antigo — o saldo âncora é imutável
+      // Novos registros só se a data for anterior à âncora existente
+      const novaData=new Date().toISOString().split('T')[0];
+      const jaTemAncora=hist[chave].some(r=>r.fonte==='ancora'||r.fonte==='extrato');
+      if(!jaTemAncora){
+        // Primeira vez — este é o saldo âncora
+        hist[chave]=[{data:novaData,saldo:cfg._saldoManual,banco:cfg.banco,fonte:'ancora'}];
+        console.log('[saldo] Âncora salva:',cfg.banco,'→',cfg._saldoManual);
+      } else {
+        // Já tem âncora — adicionar como atualização recente mas manter histórico
+        hist[chave].unshift({data:novaData,saldo:cfg._saldoManual,banco:cfg.banco,fonte:'atualizado'});
+        hist[chave]=hist[chave].slice(0,12);
+        console.log('[saldo] Saldo atualizado:',cfg.banco,'→',cfg._saldoManual);
+      }
       lss('fin_saldos_hist',JSON.stringify(hist));
-      console.log('[saldo] Salvo:',cfg.banco,'→',cfg._saldoManual);
     }catch(e){console.warn('[saldo] Erro ao salvar:',e);}
   }
   
@@ -4467,10 +4514,21 @@ function limparFiltro(inputId,btnId,tipo){
   if(btn)btn.style.display='none';
   filtrarTrans();
 }
+// Limpar descrição para display (remove info bancária desnecessária)
+function limparDescDisplay(desc){
+  if(!desc) return '—';
+  return desc
+    .replace(/\s*-\s*•+\.[\d.•-]+\s*-\s*[A-Z].{5,}$/,'')
+    .replace(/\s*-\s*[\d]{2}\.[\d]{3}\.[\d]{3}\/[\d]{4}-[\d]{2}\s*-\s*.+$/,'')
+    .replace(/\s*\(Transferência enviada\)$/i,'')
+    .replace(/\s*-\s*•+\.[\d]+\.[\d]+-•+\s*-\s*.+$/,'')
+    .trim();
+}
+
 function renderTransRows(rows){
   if(!rows||rows.length===0) return`<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--t3)">Nenhuma transação encontrada</td></tr>`;
   return rows.map(t=>`<tr>
-    <td title="${t.desc}">${t.desc}</td>
+    <td title="${t.desc}">${limparDescDisplay(t.desc)}</td>
     <td><span class="pill ${PP[t.pilar]||'pe'}">${t.cat||t.pilar}</span></td>
     <td style="color:var(--t3);font-size:12px">${t.meio||''}</td>
     <td class="${t.tipo==='Receita'?'vp':'vn'}">${t.tipo==='Receita'?'+':'-'}${fmt(Math.abs(t.valor))}</td>
