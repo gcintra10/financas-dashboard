@@ -1263,6 +1263,8 @@ function obRender(){
 
 function obStep0(){
   const r=OB.renda;
+  const cpfSalvo=ls('fin_cpf_usuario')||'';
+  const cnpjSalvo=ls('fin_cnpj_usuario')||'';
   return`<div class="ob-field"><label class="ob-label">Tipo de renda</label>
     <select class="ob-select" id="ob-tipo" onchange="OB.renda.tipo=this.value">
       <option value="fixa" ${r.tipo==='fixa'?'selected':''}>Renda fixa (mesmo valor todo mês)</option>
@@ -1281,6 +1283,20 @@ function obStep0(){
   </div>
   <div class="ob-field"><label class="ob-label">Tem renda extra recorrente? (R$)</label>
     <input class="ob-input" type="number" id="ob-extra" placeholder="0 se não houver" value="${OB.renda.extra||0}" oninput="OB.renda.extra=this.value"/>
+  </div>
+  <div style="margin-top:14px;padding:12px 14px;background:var(--ci);border-radius:var(--rs);border:1px solid var(--b)">
+    <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:2px">🔍 Identificação pessoal (para filtrar transferências entre suas contas)</div>
+    <div style="font-size:11px;color:var(--t3);margin-bottom:10px">Usado apenas para ignorar automaticamente transferências entre suas próprias contas ao importar extratos.</div>
+    <div class="ob-grid2">
+      <div class="ob-field"><label class="ob-label">Seu CPF (parcial ou completo)</label>
+        <input class="ob-input" id="ob-cpf" placeholder="Ex: 307.614 ou 104.307.614-06" value="${cpfSalvo}"
+          oninput="lss('fin_cpf_usuario',this.value.trim());OB.renda.cpf=this.value.trim()"/>
+      </div>
+      <div class="ob-field"><label class="ob-label">CNPJ PJ (se tiver conta PJ)</label>
+        <input class="ob-input" id="ob-cnpj" placeholder="Ex: 51.276 ou 51.276.744" value="${cnpjSalvo}"
+          oninput="lss('fin_cnpj_usuario',this.value.trim());OB.renda.cnpj=this.value.trim()"/>
+      </div>
+    </div>
   </div>`;
 }
 
@@ -2235,23 +2251,67 @@ function processarDados(tr,ve,me,ins,es,gf,mesStr){
   const gfRows=gf.slice(1).filter(r=>r[0]&&r[7]==='Sim');
   gfRows.forEach(r=>{
     const dia=parseInt(r[4])||5,valor=Math.abs(num(r[3]));
+    if(!valor) return;
+    const diaPassou=hoje.getDate()>dia;
+    const mesAtualCalc=ST.mesIdx===hoje.getMonth()&&ST.ano===hoje.getFullYear();
+
+    // Verificar se este gasto fixo já apareceu no extrato do mês atual
+    const nomeFixo=String(r[0]).toLowerCase().trim();
+    const jaNoExtrato=mesAtualCalc&&tm.some(t=>{
+      const tn=String(t[1]).toLowerCase();
+      return t[3]==='Despesa'&&(tn.includes(nomeFixo.substring(0,8))||nomeFixo.includes(tn.substring(0,8)))&&
+             Math.abs(Math.abs(num(t[2]))-valor)/Math.max(valor,1)<0.15;
+    });
+
     let proxVenc=new Date(hoje.getFullYear(),hoje.getMonth(),dia);
-    if(proxVenc<hoje)proxVenc=new Date(hoje.getFullYear(),hoje.getMonth()+1,dia);
-    // Só adiciona se não já existir na aba Vencimentos
+    // Se passou o dia E não tem no extrato → alerta (atrasado ou não importado)
+    let statusFixo='Pendente';
+    let alertaFixo=false;
+    if(mesAtualCalc&&diaPassou&&!jaNoExtrato){
+      // Passou da data, deveria ter acontecido, não encontrado no extrato
+      statusFixo='Não confirmado';
+      alertaFixo=true;
+      // Mantém a data deste mês (não avança para o próximo)
+    } else if(proxVenc<hoje){
+      proxVenc=new Date(hoje.getFullYear(),hoje.getMonth()+1,dia);
+    }
+
     const jaExiste=vTodos.some(v=>v.nome===r[0]&&v.diaVenc===dia);
     if(!jaExiste&&valor>0){
-      vTodos.push({nome:r[0],tipo:r[1]||'Fixo',valor,diaVenc:dia,vencimento:proxVenc.toISOString().split('T')[0],status:'Pendente',banco:r[5]||'',origem:'gastos_fixos'});
+      vTodos.push({
+        nome:r[0],tipo:r[1]||'Fixo',valor,diaVenc:dia,
+        vencimento:proxVenc.toISOString().split('T')[0],
+        status:statusFixo,banco:r[5]||'',origem:'gastos_fixos',
+        alerta:alertaFixo,jaNoExtrato,
+      });
     }
   });
 
   // Do onboarding (despesas cadastradas)
   despesasOB.forEach(d=>{
     if(!d.desc||!d.valor||!d.dia)return;
+    const mesAtualCalc=ST.mesIdx===hoje.getMonth()&&ST.ano===hoje.getFullYear();
+    const diaPassou=mesAtualCalc&&hoje.getDate()>d.dia;
+    const nomeFixo=String(d.desc).toLowerCase().trim();
+    const jaNoExtrato=mesAtualCalc&&tm.some(t=>{
+      const tn=String(t[1]).toLowerCase();
+      return t[3]==='Despesa'&&(tn.includes(nomeFixo.substring(0,8))||nomeFixo.includes(tn.substring(0,8)))&&
+             Math.abs(Math.abs(num(t[2]))-d.valor)/Math.max(d.valor,1)<0.15;
+    });
     let proxVenc=new Date(hoje.getFullYear(),hoje.getMonth(),d.dia);
-    if(proxVenc<hoje)proxVenc=new Date(hoje.getFullYear(),hoje.getMonth()+1,d.dia);
+    let statusFixo='Pendente',alertaFixo=false;
+    if(mesAtualCalc&&diaPassou&&!jaNoExtrato){
+      statusFixo='Não confirmado';alertaFixo=true;
+    } else if(proxVenc<hoje){
+      proxVenc=new Date(hoje.getFullYear(),hoje.getMonth()+1,d.dia);
+    }
     const jaExiste=vTodos.some(v=>v.nome===d.desc);
     if(!jaExiste){
-      vTodos.push({nome:d.desc,tipo:d.tipo||'Boleto',valor:d.valor,diaVenc:d.dia,vencimento:proxVenc.toISOString().split('T')[0],status:'Pendente',banco:'',origem:'perfil'});
+      vTodos.push({
+        nome:d.desc,tipo:d.tipo||'Boleto',valor:d.valor,diaVenc:d.dia,
+        vencimento:proxVenc.toISOString().split('T')[0],
+        status:statusFixo,banco:'',origem:'perfil',alerta:alertaFixo,jaNoExtrato,
+      });
     }
   });
 
@@ -2417,6 +2477,9 @@ function gerarInsightPills(d){
   // Vencimentos
   const urgentes=d.vp.filter(v=>{const dt=pD(v.vencimento);return dt&&Math.round((dt-new Date())/864e5)<=3;});
   if(urgentes.length>0) pills.push({cls:'re',icon:'📅',txt:`${urgentes.length} venc. em até 3 dias`});
+  // Alertas de gastos fixos não confirmados no extrato
+  const naoConfirmados=d.vp.filter(v=>v.alerta===true);
+  if(naoConfirmados.length>0) pills.push({cls:'re',icon:'⚠️',txt:`${naoConfirmados.length} fixo(s) não encontrado(s) no extrato — importe os extratos`});
   // Patrimônio
   if(d.invTotal>0) pills.push({cls:'ac',icon:'📈',txt:`Patrimônio: ${fmt(d.invTotal)}`});
   // Pilar mais estourado
@@ -2947,22 +3010,27 @@ function rVenc(){
   if(d.vp.length===0){html+=`<div class="empty" style="padding:30px">✅ Nenhum vencimento nos próximos 30 dias</div>`;}
   else d.vp.forEach(v=>{
     const dt=pD(v.vencimento),diff=dt?Math.round((dt-hoje)/864e5):99;
-    const ds=diff===0?'Hoje!':diff===1?'Amanhã':`Em ${diff} dias`;
+    const ds=diff<0?`${Math.abs(diff)}d atrás`:diff===0?'Hoje!':diff===1?'Amanhã':`Em ${diff} dias`;
     const isReceita=v.tipo==='Receita'||v.nome?.toLowerCase().includes('salário')||v.nome?.toLowerCase().includes('salario');
-    const uc=isReceita?'nrm':diff<=3?'urg':diff<=7?'prx':'nrm';
+    // Alerta: passou a data, não encontrado no extrato
+    const eAlerta=!isReceita&&v.alerta===true;
+    const uc=isReceita?'nrm':eAlerta?'urg':diff<=3?'urg':diff<=7?'prx':'nrm';
     const dotCls=isReceita?'nrm':uc;
-    const tc=isReceita?'g':v.status==='Pago'?'g':v.status==='Atrasado'?'a':'p';
+    const tc=isReceita?'g':eAlerta?'a':v.status==='Pago'?'g':v.status==='Atrasado'?'a':'p';
     const origem=v.origem==='perfil'?'📋 Perfil':v.origem==='gastos_fixos'?'📄 Fixos':'📊 Planilha';
     const valorCls=isReceita?'style="color:var(--gr)"':'';
-    html+=`<div class="vc-item">
+    const alertaMsg=eAlerta?`<div style="font-size:10px;color:var(--re);margin-top:2px;font-weight:600">⚠️ Passou a data — não encontrado no extrato. Importe o extrato para confirmar.</div>`:'';
+    const statusLabel=eAlerta?'Não confirmado':isReceita?'Receita':v.status;
+    html+=`<div class="vc-item" style="${eAlerta?'background:var(--rd);border-radius:var(--rs);padding:8px 10px;margin:-2px 0 4px;':''}" >
       <div class="vc-dot ${dotCls}" ${isReceita?'style="background:var(--gr);box-shadow:0 0 0 3px var(--gd)"':''}></div>
       <div class="vc-inf">
         <div class="vc-nm">${v.nome}</div>
         <div class="vc-dt">${ds} · ${v.banco||''} · <span style="color:var(--t3)">${origem}</span></div>
+        ${alertaMsg}
       </div>
       <div class="vc-rt">
         <div class="vc-vl" ${valorCls}>${isReceita?'+':''}${v.valor>0?fmt(v.valor):'Variável'}</div>
-        <span class="vc-tg ${tc}">${isReceita?'Receita':v.status}</span>
+        <span class="vc-tg ${tc}">${statusLabel}</span>
       </div>
     </div>`;
   });
@@ -3370,26 +3438,37 @@ function impParseNubankConta(csvText, bancoCfg){
   const lines=csvText.trim().split('\n').filter(l=>l.trim());
   const inicio=lines[0].toLowerCase().includes('data')||lines[0].toLowerCase().includes('date')?1:0;
 
-  // CPF/CNPJ do Gabriel para detectar transferências entre contas próprias
-  // Itaú: •••.307.614-•• | CNPJ PJ: 51.276.744
-  // Agência Itaú: 3294 Conta: 33615-5
-  const CONTAS_PROPRIAS=[
-    '51.276',           // CNPJ PJ
-    '307.614',          // CPF Gabriel (parcial, mascarado)
-    'gabriel cintra de santana',
-    'pagamento de fatura',
-    'pagamento fatura',
-    'resgate de aplicação',
-    'resgate cdb',
-    'resgate rdb',
-  ];
+  // Carregar CPF/CNPJ do usuário para ignorar transferências entre contas próprias
+  function getContasProprias(){
+    const cpf=(ls('fin_cpf_usuario')||'').trim();
+    const cnpj=(ls('fin_cnpj_usuario')||'').trim();
+    const lista=[
+      'pagamento de fatura','pagamento fatura',
+      'resgate de aplicação','resgate cdb','resgate rdb',
+    ];
+    // Adicionar identificadores do usuário (parciais funcionam p/ CPF mascarado)
+    if(cpf) lista.push(...cpf.split(/[,;]/).map(s=>s.trim()).filter(Boolean));
+    if(cnpj) lista.push(...cnpj.split(/[,;]/).map(s=>s.trim()).filter(Boolean));
+    // Fallbacks hardcoded para não quebrar base existente
+    if(!cpf) lista.push('307.614');
+    if(!cnpj) lista.push('51.276');
+    // Nome do usuário atual também (transferências para si mesmo)
+    const nomeU=(USUARIO_ATUAL?.nome||ls('fin_userName')||'').toLowerCase();
+    if(nomeU&&nomeU.length>3) lista.push(nomeU);
+    return lista;
+  }
+
+  const CONTAS_PROPRIAS_DIN=getContasProprias();
 
   const isTransfEntreContasProprias=(desc)=>{
     const dl=desc.toLowerCase();
-    // Transferência enviada para conta própria → ignorar sempre
-    if(dl.includes('enviada')&&CONTAS_PROPRIAS.some(p=>dl.includes(p.toLowerCase()))) return true;
-    // Transferência recebida de conta própria (Itaú → Nubank) → ignorar
-    if(dl.includes('recebida')&&CONTAS_PROPRIAS.some(p=>dl.includes(p.toLowerCase()))) return true;
+    // Ignorar sempre: fatura, resgates
+    if(['pagamento de fatura','pagamento fatura','resgate de aplicação','resgate cdb','resgate rdb']
+       .some(ig=>dl.includes(ig))) return true;
+    // Transferência enviada para conta própria
+    if(dl.includes('enviada')&&CONTAS_PROPRIAS_DIN.some(p=>p&&dl.includes(p.toLowerCase()))) return true;
+    // Transferência recebida de conta própria (ex: Itaú → Nubank do mesmo titular)
+    if(dl.includes('recebida')&&CONTAS_PROPRIAS_DIN.some(p=>p&&dl.includes(p.toLowerCase()))) return true;
     return false;
   };
 
@@ -3655,10 +3734,15 @@ function impParseItauTexto(texto, bancoCfg){
   // Saldo do dia: capturar o primeiro "SALDO DO DIA" que aparece (mais recente)
   const reSaldo=/^(\d{2}\/\d{2}\/\d{4})\s+SALDO DO DIA\s+(\d{1,3}(?:\.\d{3})*,\d{2})\s*$/i;
 
+  // Ignorar linhas estruturais e transferências entre contas próprias
+  const cpfDin=(ls('fin_cpf_usuario')||'307.614').trim();
+  const cnpjDin=(ls('fin_cnpj_usuario')||'51.276').trim();
+  const nomeUsuario=(USUARIO_ATUAL?.nome||ls('fin_userName')||'').toLowerCase();
   const ignore=[
     'saldo do dia','rend pago aplic','saldo anterior',
-    '51.276',        // PIX conta PJ própria
-    'gabriel cintra',// pagamento para si mesmo
+    ...(cpfDin?cpfDin.split(/[,;]/).map(s=>s.trim().toLowerCase()).filter(Boolean):['307.614']),
+    ...(cnpjDin?cnpjDin.split(/[,;]/).map(s=>s.trim().toLowerCase()).filter(Boolean):['51.276']),
+    ...(nomeUsuario&&nomeUsuario.length>3?[nomeUsuario]:[]),
   ];
   const isReceitaDesc=(tl)=>[
     'pagto salario','pagamento salario','salario','receita',
