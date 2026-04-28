@@ -53,7 +53,7 @@ input,select,textarea{font-family:var(--font)}
 
 /* ══ ONBOARDING ══════════════════════════════════════════ */
 .ob-overlay{position:fixed;inset:0;z-index:3000;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
-.ob-overlay.hidden{display:none}
+.ob-overlay.hidden{display:none!important;pointer-events:none;visibility:hidden}
 .ob-shell{width:100%;max-width:620px;background:var(--card);border:1px solid var(--b2);border-radius:28px;box-shadow:var(--shm);overflow:hidden;animation:slideUp .4s var(--ease)}
 @keyframes slideUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
 
@@ -118,7 +118,7 @@ input,select,textarea{font-family:var(--font)}
 
 /* ══ SETUP ════════════════════════════════════════════════ */
 .setup-ov{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.7);backdrop-filter:blur(16px);display:flex;align-items:center;justify-content:center;padding:20px}
-.setup-ov.hidden{display:none}
+.setup-ov.hidden{display:none!important;pointer-events:none;visibility:hidden}
 .setup-card{background:var(--card);border:1px solid var(--b2);border-radius:24px;padding:36px 32px;max-width:460px;width:100%;box-shadow:var(--shm);animation:slideUp .3s var(--ease)}
 .s-ey{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ac);margin-bottom:8px}
 .s-ti{font-size:24px;font-weight:800;margin-bottom:6px;letter-spacing:-.5px}
@@ -453,7 +453,7 @@ tbody tr:hover td{background:var(--ci)}
 .user-card-av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0}
 /* ══ LOGIN PIN ══════════════════════════════════════════ */
 .login-overlay{position:fixed;inset:0;z-index:4000;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
-.login-overlay.hidden{display:none}
+.login-overlay.hidden{display:none!important;pointer-events:none;visibility:hidden}
 .login-card{background:var(--card);border:1px solid var(--b2);border-radius:28px;padding:36px 32px;max-width:380px;width:100%;box-shadow:var(--shm);text-align:center;animation:slideUp .4s var(--ease)}
 .login-logo{width:64px;height:64px;border-radius:20px;background:linear-gradient(135deg,var(--ac),var(--ac2));display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 20px;box-shadow:0 8px 24px rgba(79,70,229,.3)}
 .login-title{font-size:22px;font-weight:800;letter-spacing:-.5px;margin-bottom:6px}
@@ -1306,30 +1306,12 @@ function obStep0(){
 function obStep0PostRender(){
   const cpfEl=document.getElementById('ob-cpf');
   const cnpjEl=document.getElementById('ob-cnpj');
-  if(cpfEl) cpfEl.value=fmtCPF(ls('fin_cpf_usuario')||'');
-  if(cnpjEl) cnpjEl.value=fmtCNPJ(ls('fin_cnpj_usuario')||'');
-}
-function obStep0PostRender(){
-  // Preencher valores salvos
-  const cpfEl=document.getElementById('ob-cpf');
-  const cnpjEl=document.getElementById('ob-cnpj');
   if(cpfEl){
     cpfEl.value=fmtCPF(ls('fin_cpf_usuario')||'');
     cpfEl.addEventListener('input',function(){
       const raw=this.value.replace(/\D/g,'').slice(0,11);
-      const fmt=fmtCPF(raw);
-      // Preservar posição do cursor ajustando para formatação
-      const end=this.selectionEnd;
-      const digitosAntes=this.value.slice(0,end).replace(/\D/g,'').length;
-      this.value=fmt;
-      // Reposicionar cursor após os dígitos correspondentes
-      let pos=0,digitos=0;
-      while(pos<fmt.length&&digitos<digitosAntes){
-        if(/\d/.test(fmt[pos])) digitos++;
-        pos++;
-      }
-      this.setSelectionRange(pos,pos);
-      OB.renda.cpf=fmt;
+      this.value=fmtCPF(raw);
+      OB.renda.cpf=this.value;
       lss('fin_cpf_usuario',raw);
     });
   }
@@ -1337,22 +1319,13 @@ function obStep0PostRender(){
     cnpjEl.value=fmtCNPJ(ls('fin_cnpj_usuario')||'');
     cnpjEl.addEventListener('input',function(){
       const raw=this.value.replace(/\D/g,'').slice(0,14);
-      const fmt=fmtCNPJ(raw);
-      const end=this.selectionEnd;
-      const digitosAntes=this.value.slice(0,end).replace(/\D/g,'').length;
-      this.value=fmt;
-      let pos=0,digitos=0;
-      while(pos<fmt.length&&digitos<digitosAntes){
-        if(/\d/.test(fmt[pos])) digitos++;
-        pos++;
-      }
-      this.setSelectionRange(pos,pos);
-      OB.renda.cnpj=fmt;
+      this.value=fmtCNPJ(raw);
+      OB.renda.cnpj=this.value;
       lss('fin_cnpj_usuario',raw);
     });
   }
 }
-function obAtualizarCPF(el){} // mantido por compatibilidade — lógica movida para postRender
+function obAtualizarCPF(el){}
 function obAtualizarCNPJ(el){}
 function obStep1(){
   const sel=OB.bancos.map(b=>b.id);
