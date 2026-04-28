@@ -1253,7 +1253,7 @@ function obRender(){
   document.getElementById('ob-navinfo').textContent='';
 
   const body=document.getElementById('ob-body');
-  if(s===0) body.innerHTML=obStep0();
+  if(s===0){ body.innerHTML=obStep0(); obStep0PostRender(); }
   else if(s===1) body.innerHTML=obStep1();
   else if(s===2) body.innerHTML=obStep2();
   else if(s===3) body.innerHTML=obStep3();
@@ -1285,25 +1285,44 @@ function obStep0(){
     <input class="ob-input" type="number" id="ob-extra" placeholder="0 se não houver" value="${OB.renda.extra||0}" oninput="OB.renda.extra=this.value"/>
   </div>
   <div style="margin-top:14px;padding:12px 14px;background:var(--ci);border-radius:var(--rs);border:1px solid var(--b)">
-    <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:2px">🔍 Identificação pessoal (para filtrar transferências entre suas contas)</div>
-    <div style="font-size:11px;color:var(--t3);margin-bottom:10px">Usado apenas para ignorar automaticamente transferências entre suas próprias contas ao importar extratos.</div>
+    <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:2px">🔍 Identificação pessoal</div>
+    <div style="font-size:11px;color:var(--t3);margin-bottom:10px">Usado para ignorar transferências entre suas próprias contas ao importar extratos.</div>
     <div class="ob-grid2">
       <div class="ob-field"><label class="ob-label">Seu CPF</label>
-        <input class="ob-input" id="ob-cpf" type="tel" inputmode="numeric" maxlength="14"
-          placeholder="000.000.000-00" value="${cpfSalvo}"
-          oninput="this.value=fmtCPF(this.value);lss('fin_cpf_usuario',this.value.replace(/\D/g,''));OB.renda.cpf=this.value"/>
-        <div style="font-size:10px;color:var(--t3);margin-top:3px">Usado para ignorar transferências entre suas contas</div>
+        <input class="ob-input" id="ob-cpf" type="text" inputmode="numeric" maxlength="14"
+          placeholder="000.000.000-00"
+          onkeyup="obAtualizarCPF(this)"/>
+        <div style="font-size:10px;color:var(--t3);margin-top:3px">Só números — formata automaticamente</div>
       </div>
-      <div class="ob-field"><label class="ob-label">CNPJ PJ (se tiver conta PJ)</label>
-        <input class="ob-input" id="ob-cnpj" type="tel" inputmode="numeric" maxlength="18"
-          placeholder="00.000.000/0001-00" value="${cnpjSalvo}"
-          oninput="this.value=fmtCNPJ(this.value);lss('fin_cnpj_usuario',this.value.replace(/\D/g,''));OB.renda.cnpj=this.value"/>
+      <div class="ob-field"><label class="ob-label">CNPJ PJ (se tiver)</label>
+        <input class="ob-input" id="ob-cnpj" type="text" inputmode="numeric" maxlength="18"
+          placeholder="00.000.000/0001-00"
+          onkeyup="obAtualizarCNPJ(this)"/>
         <div style="font-size:10px;color:var(--t3);margin-top:3px">Opcional — só se usar conta jurídica</div>
       </div>
     </div>
   </div>`;
 }
 
+// Chamado após renderizar o step 0 para preencher valores salvos
+function obStep0PostRender(){
+  const cpfEl=document.getElementById('ob-cpf');
+  const cnpjEl=document.getElementById('ob-cnpj');
+  if(cpfEl) cpfEl.value=fmtCPF(ls('fin_cpf_usuario')||'');
+  if(cnpjEl) cnpjEl.value=fmtCNPJ(ls('fin_cnpj_usuario')||'');
+}
+function obAtualizarCPF(el){
+  const pos=el.selectionStart;
+  const anterior=el.value;
+  el.value=fmtCPF(el.value);
+  OB.renda.cpf=el.value;
+  lss('fin_cpf_usuario',el.value.replace(/[^\d]/g,''));
+}
+function obAtualizarCNPJ(el){
+  el.value=fmtCNPJ(el.value);
+  OB.renda.cnpj=el.value;
+  lss('fin_cnpj_usuario',el.value.replace(/[^\d]/g,''));
+}
 function obStep1(){
   const sel=OB.bancos.map(b=>b.id);
   let html=`<div class="bank-grid">${BANKS.map(b=>`<div class="bank-card ${sel.includes(b.id)?'selected':''}" onclick="toggleBank('${b.id}')">
