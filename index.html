@@ -3438,64 +3438,72 @@ function impParseNubankConta(csvText, bancoCfg){
   const lines=csvText.trim().split('\n').filter(l=>l.trim());
   const inicio=lines[0].toLowerCase().includes('data')||lines[0].toLowerCase().includes('date')?1:0;
 
-  // Carregar CPF/CNPJ do usuário para ignorar transferências entre contas próprias
+  // ── Regras de ignorar (SEMPRE, independente de quem é) ──────
+  const IGNORAR_SEMPRE=[
+    'pagamento de fatura',
+    'pagamento fatura',
+    'resgate de empréstimo',   // compensação de empréstimo — não é receita nova
+    'resgate de aplicação',
+    'resgate cdb','resgate rdb',
+    'valor adicionado na conta por cartão', // PJ: adicionar para pix via cartão, os gastos já estão no cartão
+  ];
+
+  // ── Carregar contas próprias do usuário ──────────────────────
   function getContasProprias(){
     const cpf=(ls('fin_cpf_usuario')||'').trim();
     const cnpj=(ls('fin_cnpj_usuario')||'').trim();
-    const lista=[
-      'pagamento de fatura','pagamento fatura',
-      'resgate de aplicação','resgate cdb','resgate rdb',
-    ];
-    // Adicionar identificadores do usuário (parciais funcionam p/ CPF mascarado)
+    const lista=[];
     if(cpf) lista.push(...cpf.split(/[,;]/).map(s=>s.trim()).filter(Boolean));
     if(cnpj) lista.push(...cnpj.split(/[,;]/).map(s=>s.trim()).filter(Boolean));
-    // Fallbacks hardcoded para não quebrar base existente
-    if(!cpf) lista.push('307.614');
-    if(!cnpj) lista.push('51.276');
-    // Nome do usuário atual também (transferências para si mesmo)
+    // Fallback hardcoded só se não houver nada cadastrado
+    if(lista.length===0){lista.push('307.614','51.276');}
+    // Nome do usuário (cobre "Gabriel Cintra de Santana" no descrição)
     const nomeU=(USUARIO_ATUAL?.nome||ls('fin_userName')||'').toLowerCase();
     if(nomeU&&nomeU.length>3) lista.push(nomeU);
+    // Contas detectadas automaticamente pelo algoritmo espelho
+    const espelho=JSON.parse(ls('fin_contas_espelho')||'[]');
+    espelho.forEach(e=>{if(e) lista.push(e);});
     return lista;
   }
 
   const CONTAS_PROPRIAS_DIN=getContasProprias();
 
-  const isTransfEntreContasProprias=(desc)=>{
+  const isIgnorar=(desc)=>{
     const dl=desc.toLowerCase();
-    // Ignorar sempre: fatura, resgates
-    if(['pagamento de fatura','pagamento fatura','resgate de aplicação','resgate cdb','resgate rdb']
-       .some(ig=>dl.includes(ig))) return true;
-    // Transferência enviada para conta própria
-    if(dl.includes('enviada')&&CONTAS_PROPRIAS_DIN.some(p=>p&&dl.includes(p.toLowerCase()))) return true;
-    // Transferência recebida de conta própria (ex: Itaú → Nubank do mesmo titular)
-    if(dl.includes('recebida')&&CONTAS_PROPRIAS_DIN.some(p=>p&&dl.includes(p.toLowerCase()))) return true;
+    // Ignorar padrões fixos
+    if(IGNORAR_SEMPRE.some(ig=>dl.includes(ig))) return true;
     return false;
   };
 
-  const isIgnorar=(desc)=>[
-    'pagamento de fatura','pagamento fatura',
-    'resgate de aplicação','resgate cdb','resgate rdb',
-  ].some(ig=>desc.toLowerCase().includes(ig));
-
-  const isReceitaDesc=(d)=>[
-    'recebida pelo pix','crédito em conta','salário','salario',
-    'rendimento','deposito','depósito','remuneração',
-  ].some(r=>d.toLowerCase().includes(r));
+  // Transferência entre contas próprias:
+  // - recebida DE CPF/CNPJ próprio → é dinheiro próprio chegando (ignorar)
+  // - enviada PARA CPF/CNPJ próprio → é dinheiro próprio saindo (ignorar)
+  const isTransfEntreContasProprias=(desc)=>{
+    const dl=desc.toLowerCase();
+    const ehTransf=dl.includes('transferência recebida')||dl.includes('transferência enviada')||
+                   dl.includes('transferencia recebida')||dl.includes('transferencia enviada')||
+                   dl.includes('transferência recebida')||dl.includes('transferencia recebida')||
+                   dl.startsWith('transferência recebida')||dl.startsWith('transferência enviada');
+    if(!ehTransf) return false;
+    return CONTAS_PROPRIAS_DIN.some(p=>p&&dl.includes(p.toLowerCase()));
+  };
 
   // Limpar descrição: remover info bancária desnecessária após o nome
   function limparDesc(desc){
-    // Padrões: "NOME - •••.000.000-•• - BANCO..." → "NOME"
-    // "NOME - 00.000.000/0001-00 - BANCO..." → "NOME"
-    // "Transferência enviada pelo Pix - NOME ..." → "Pix - NOME"
     let d=desc
-      .replace(/\s*-\s*•+\.[\d.•-]+\s*-\s*.+$/,'')   // remove CPF mascarado + banco
-      .replace(/\s*-\s*[\d]{2}\.[\d]{3}\.[\d]{3}\/[\d]{4}-[\d]{2}\s*-\s*.+$/,'') // remove CNPJ + banco
-      .replace(/\s*\(Transferência enviada\)$/,'')       // remove sufixo redundante
-      .replace(/\s*-\s*\d{2}\.\d{3}\.\d{3}-\d$/,'')    // remove CPF visível + banco
+      .replace(/\s*-\s*•+\.[\d.•-]+\s*-\s*.+$/,'')
+      .replace(/\s*-\s*[\d]{2}\.[\d]{3}\.[\d]{3}\/[\d]{4}-[\d]{2}\s*-\s*.+$/,'')
+      .replace(/\s*\(Transferência enviada\)$/i,'')
+      .replace(/\s*-\s*\d{2}\.\d{3}\.\d{3}-\d{2}$/,'')
       .trim();
-    // "Transferência enviada pelo Pix - NOME" → extrair só o nome
-    const m=d.match(/Transferência (?:enviada|recebida) pelo Pix - (.+)/i);
-    if(m) return (d.startsWith('Transferência enviada')?'Pix enviado → ':'Pix recebido ← ')+m[1].trim();
+    const m=d.match(/Transferência (?:enviada|recebida)(?: pelo Pix)? - (.+)/i);
+    if(m){
+      const nome=m[1].trim();
+      return (d.toLowerCase().startsWith('transferência enviada')?'Pix → ':'Pix ← ')+nome;
+    }
+    // "Transferência Recebida - NOME ..."
+    const m2=d.match(/Transferência Recebida - (.+)/i);
+    if(m2) return 'Pix ← '+m2[1].trim();
     return d;
   }
 
@@ -3511,12 +3519,17 @@ function impParseNubankConta(csvText, bancoCfg){
     const valor=parseFloat(valorRaw.replace(',','.'));
     if(isNaN(valor)||valor===0) continue;
 
-    // Ignorar transferências entre contas próprias e faturas
+    // Ignorar padrões fixos
     if(isIgnorar(descOriginal)) continue;
+    // Ignorar transferências entre contas próprias
     if(isTransfEntreContasProprias(descOriginal)) continue;
 
+    const dl=descOriginal.toLowerCase();
     const desc=limparDesc(descOriginal);
-    const isReceita=valor>0;  // no Nubank conta: positivo = entrada, negativo = saída
+
+    // Receita: valor positivo = entrou dinheiro
+    // Exceção: "Resgate de empréstimo" já foi ignorado acima
+    const isReceita=valor>0;
 
     let dataISO=dataRaw;
     if(dataRaw.includes('/')){
@@ -3527,19 +3540,26 @@ function impParseNubankConta(csvText, bancoCfg){
     const mesStr=impMesDireto(dataISO);
     const cls=impClassificar(desc);
 
-    const dl=descOriginal.toLowerCase();
+    // Meio de pagamento pela descrição
     let meio=bancoCfg.banco+' Conta';
-    if(dl.includes('pix')) meio='PIX';
+    if(dl.includes('pix')||dl.includes('transferência')) meio='PIX';
     else if(dl.includes('compra no débito')||dl.includes('compra no debito')) meio='Débito '+bancoCfg.banco;
     else if(dl.includes('boleto')) meio='Boleto';
+    else if(dl.includes('saque')) meio='Saque';
+
+    // Categoria especial para empréstimos
+    const isEmprestimo=dl.includes('depósito de empréstimo')||dl.includes('deposito de empréstimo')||
+                       dl.includes('deposito emprestimo');
+    const catFinal=isEmprestimo?'Empréstimo Recebido':(isReceita?'Salário/Receita':cls.cat);
+    const pilarFinal=isReceita?'Receita':cls.pilar;
 
     rows.push({
       data:dataFmt,
       desc,
       valor:isReceita?Math.abs(valor):-Math.abs(valor),
       tipo:isReceita?'Receita':'Despesa',
-      pilar:isReceita?'Receita':cls.pilar,
-      cat:isReceita?'Salário/Receita':cls.cat,
+      pilar:pilarFinal,
+      cat:catFinal,
       meio,
       banco:bancoCfg.banco,
       mes:mesStr,
@@ -3800,7 +3820,61 @@ function impParseItauTexto(texto, bancoCfg){
   return rows;
 }
 
-// ── impReprocessar: reaplica mês de fatura ao mudar fechamento/vencimento ──
+// ── Algoritmo Espelho: detectar contas próprias automaticamente ──────────────
+// Analisa todos os extratos importados e identifica CPF/CNPJs que aparecem
+// como remetente EM UM extrato e destinatário EM OUTRO → marcados como próprios
+async function detectarContasPropriasEspelho(todasTransacoes){
+  // Coletar todos os CPF/CNPJs que aparecem nas descrições
+  const reIdent=/(\d{2,3}\.\d{3}(?:\.\d{3})?(?:\/\d{4}-\d{2})?)/g;
+  const porBanco={};
+
+  todasTransacoes.forEach(t=>{
+    const banco=t.banco||'?';
+    if(!porBanco[banco]) porBanco[banco]={enviados:new Set(),recebidos:new Set()};
+    const dl=(t.desc||'').toLowerCase();
+    const orig=t._descOriginal||(t.desc||'');
+    const matches=[...orig.matchAll(reIdent)].map(m=>m[1]);
+    if(dl.includes('pix →')||dl.includes('pix enviado')||t.valor<0){
+      matches.forEach(m=>porBanco[banco].enviados.add(m));
+    } else if(dl.includes('pix ←')||dl.includes('pix recebido')||t.valor>0){
+      matches.forEach(m=>porBanco[banco].recebidos.add(m));
+    }
+  });
+
+  // Encontrar CPF/CNPJs que aparecem como enviado em um banco e recebido em outro
+  const bancos=Object.keys(porBanco);
+  const candidatos=new Set();
+  for(let i=0;i<bancos.length;i++){
+    for(let j=0;j<bancos.length;j++){
+      if(i===j) continue;
+      porBanco[bancos[i]].enviados.forEach(id=>{
+        if(porBanco[bancos[j]].recebidos.has(id)) candidatos.add(id);
+      });
+    }
+  }
+
+  if(candidatos.size===0) return;
+
+  // Filtrar os que já estão cadastrados
+  const jaConhecidos=[
+    ...(ls('fin_cpf_usuario')||'').split(/[,;]/).map(s=>s.trim()),
+    ...(ls('fin_cnpj_usuario')||'').split(/[,;]/).map(s=>s.trim()),
+    ...JSON.parse(ls('fin_contas_espelho')||'[]'),
+  ].filter(Boolean);
+
+  const novos=[...candidatos].filter(c=>!jaConhecidos.some(j=>c.includes(j)||j.includes(c)));
+  if(novos.length===0) return;
+
+  // Mostrar confirmação ao usuário
+  const msg=`🔍 Detectamos possíveis transferências entre suas próprias contas.\n\nOs seguintes identificadores aparecem enviados em uma conta e recebidos em outra:\n\n${novos.map(n=>`  • ${n}`).join('\n')}\n\nDeseja marcá-los como contas próprias? (as transferências entre eles serão ignoradas)`;
+  if(confirm(msg)){
+    const espelho=JSON.parse(ls('fin_contas_espelho')||'[]');
+    novos.forEach(n=>{if(!espelho.includes(n))espelho.push(n);});
+    lss('fin_contas_espelho',JSON.stringify(espelho));
+    // Reprocessar com os novos identificadores
+    alert(`✅ ${novos.length} conta(s) marcada(s). Na próxima importação, as transferências entre elas serão ignoradas automaticamente.`);
+  }
+}
 function impReprocessar(){
   if(!_impDados||_impDados.length===0)return;
   const fechDia=parseInt(document.getElementById('impFechDia')?.value||28)||28;
@@ -4143,6 +4217,11 @@ async function impProcessarArquivos(lista){
     else if(bancoCfg.tipo==='bradesco_pdf') rows=await impParseBradescoOuItauPDF(file,bancoCfg);
     window._impUltimoBancoCfg=bancoCfg;
     _impDados.push(...rows);
+  }
+
+  // ── Algoritmo Espelho: detectar contas próprias automaticamente ──
+  if(_impArquivosAtivos.length>1){
+    await detectarContasPropriasEspelho(_impDados);
   }
 
   if(_impDados.length===0){
