@@ -1650,6 +1650,11 @@ function initPinPads(){
 
 // Listener global de teclado para PIN — ativo quando step de PIN está visível
 function _pinKeyHandler(e){
+  // NUNCA interceptar quando o foco está em um campo de texto, número, select ou textarea
+  const tag=document.activeElement?.tagName;
+  const tipo=document.activeElement?.type;
+  if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT') return;
+
   const stepAuth=document.getElementById('loginStepAuth');
   const stepCriar=document.getElementById('loginStepCriarPIN');
   const authVis=stepAuth&&stepAuth.style.display!=='none';
