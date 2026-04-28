@@ -2626,7 +2626,7 @@ function rVisao(){
           return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--b)">
             <div style="width:34px;height:34px;border-radius:10px;background:${isRec?'var(--gd)':'var(--ci)'};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${icon}</div>
             <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${t.desc}">${limparDescDisplay(t.desc)}</div>
+              <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${t.desc}">${limparDescDisplay(t.desc)}${(t.obs&&t.obs.startsWith('*'))?` <span style="font-size:10px;color:var(--am);font-weight:700">(${t.obs.replace(/^\*\s*/,'')})</span>`:''}</div>
               <div style="font-size:11px;color:var(--t3)">${t.cat||'—'} · ${d2}</div>
             </div>
             <div style="font-size:13px;font-weight:700;font-family:var(--mono);color:${isRec?'var(--gr)':'var(--re)'};white-space:nowrap">${isRec?'+':'−'}${fmt(Math.abs(t.valor))}</div>
@@ -3442,10 +3442,14 @@ function impParseNubankConta(csvText, bancoCfg){
   const IGNORAR_SEMPRE=[
     'pagamento de fatura',
     'pagamento fatura',
-    'resgate de empréstimo',   // compensação de empréstimo — não é receita nova
-    'resgate de aplicação',
+    'resgate de aplicação',       // resgate de investimento — neutro
     'resgate cdb','resgate rdb',
-    'valor adicionado na conta por cartão', // PJ: adicionar para pix via cartão, os gastos já estão no cartão
+    'valor adicionado na conta por cartão', // PJ: já contabilizado no cartão
+  ];
+
+  // Padrões que são DESPESA mesmo sendo "resgate" ou saída de empréstimo
+  const DESPESA_EMPRESTIMO=[
+    'resgate de empréstimo',  // parcela de pagamento de empréstimo = despesa real
   ];
 
   // ── Carregar contas próprias do usuário ──────────────────────
@@ -3521,15 +3525,23 @@ function impParseNubankConta(csvText, bancoCfg){
 
     // Ignorar padrões fixos
     if(isIgnorar(descOriginal)) continue;
-    // Ignorar transferências entre contas próprias
-    if(isTransfEntreContasProprias(descOriginal)) continue;
+
+    // Parcela de empréstimo = despesa real (não ignorar)
+    const isParcela=DESPESA_EMPRESTIMO.some(p=>descOriginal.toLowerCase().includes(p));
+
+    // Ignorar transferências entre contas próprias (exceto parcelas)
+    if(!isParcela && isTransfEntreContasProprias(descOriginal)) continue;
 
     const dl=descOriginal.toLowerCase();
     const desc=limparDesc(descOriginal);
 
+    // Empréstimo recebido = receita com asterisco
+    const isEmprestimoRecebido=dl.includes('depósito de empréstimo')||
+                                dl.includes('deposito de empréstimo')||
+                                dl.includes('deposito emprestimo');
+
     // Receita: valor positivo = entrou dinheiro
-    // Exceção: "Resgate de empréstimo" já foi ignorado acima
-    const isReceita=valor>0;
+    const isReceita=!isParcela&&valor>0;
 
     let dataISO=dataRaw;
     if(dataRaw.includes('/')){
@@ -3547,11 +3559,15 @@ function impParseNubankConta(csvText, bancoCfg){
     else if(dl.includes('boleto')) meio='Boleto';
     else if(dl.includes('saque')) meio='Saque';
 
-    // Categoria especial para empréstimos
-    const isEmprestimo=dl.includes('depósito de empréstimo')||dl.includes('deposito de empréstimo')||
-                       dl.includes('deposito emprestimo');
-    const catFinal=isEmprestimo?'Empréstimo Recebido':(isReceita?'Salário/Receita':cls.cat);
-    const pilarFinal=isReceita?'Receita':cls.pilar;
+    // Categoria, pilar e obs finais
+    const catFinal = isParcela          ? 'Financiamento/Empréstimo'
+                   : isEmprestimoRecebido ? 'Empréstimo Recebido'
+                   : isReceita           ? 'Salário/Receita'
+                   : cls.cat;
+    const pilarFinal = isReceita ? 'Receita' : (isParcela?'Necessidades':cls.pilar);
+    const obsFinal = isEmprestimoRecebido ? '* Empréstimo recebido'
+                   : isParcela             ? '* Parcela empréstimo'
+                   : 'Importado Nubank Conta';
 
     rows.push({
       data:dataFmt,
@@ -3563,7 +3579,7 @@ function impParseNubankConta(csvText, bancoCfg){
       meio,
       banco:bancoCfg.banco,
       mes:mesStr,
-      obs:'Importado Nubank Conta',
+      obs:obsFinal,
     });
   }
 
@@ -4691,7 +4707,7 @@ function limparDescDisplay(desc){
 function renderTransRows(rows){
   if(!rows||rows.length===0) return`<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--t3)">Nenhuma transação encontrada</td></tr>`;
   return rows.map(t=>`<tr>
-    <td title="${t.desc}">${limparDescDisplay(t.desc)}</td>
+    <td title="${t.desc}">${limparDescDisplay(t.desc)}${(t.obs&&t.obs.startsWith('*'))?` <span style="font-size:10px;color:var(--am);font-weight:700;background:var(--amd);padding:1px 5px;border-radius:4px">${t.obs.replace(/^\*\s*/,'')}</span>`:''}</td>
     <td><span class="pill ${PP[t.pilar]||'pe'}">${t.cat||t.pilar}</span></td>
     <td style="color:var(--t3);font-size:12px">${t.meio||''}</td>
     <td class="${t.tipo==='Receita'?'vp':'vn'}">${t.tipo==='Receita'?'+':'-'}${fmt(Math.abs(t.valor))}</td>
